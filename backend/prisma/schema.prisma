@@ -13,3 +13,215 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
+// 用户模型
+model User {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  email       String   @unique
+  username    String   @unique
+  password    String
+  avatar      String?
+  displayName String?
+  bio         String?
+  
+  // 认证相关
+  isVerified  Boolean  @default(false)
+  lastLogin   DateTime?
+  
+  // 时间戳
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  pets        Pet[]
+  conversations Conversation[]
+  
+  @@map("users")
+}
+
+// 宠物模型
+model Pet {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  avatar      String?
+  description String?
+  
+  // 基础属性
+  species     String   @default("cat") // cat, dog, rabbit, etc.
+  breed       String?
+  color       String?
+  gender      String?  // male, female, neutral
+  
+  // AI个性特质 (0-100范围)
+  personality Json     @default("{\"openness\": 50, \"conscientiousness\": 50, \"extraversion\": 50, \"agreeableness\": 50, \"neuroticism\": 50}")
+  
+  // 状态属性 (0-100范围)
+  state       Json     @default("{\"happiness\": 80, \"energy\": 70, \"hunger\": 30, \"cleanliness\": 90, \"sociability\": 60}")
+  
+  // 技能和经验
+  skills      Json     @default("{\"communication\": 0, \"creativity\": 0, \"humor\": 0, \"empathy\": 0, \"knowledge\": 0}")
+  experience  Int      @default(0)
+  level       Int      @default(1)
+  
+  // 行为模式
+  behaviorPattern Json @default("{\"preferredTopics\": [], \"communicationStyle\": \"friendly\", \"responseLength\": \"medium\"}")
+  
+  // 统计数据
+  totalInteractions Int @default(0)
+  lastInteraction   DateTime?
+  
+  // 时间戳
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  ownerId     String   @db.ObjectId
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  conversations   Conversation[]
+  evolutionLogs   PetEvolutionLog[]
+  interactionPatterns InteractionPattern[]
+  
+  @@map("pets")
+}
+
+// 对话模型
+model Conversation {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String?
+  summary     String?
+  
+  // 对话设置
+  isActive    Boolean  @default(true)
+  isArchived  Boolean  @default(false)
+  
+  // 对话统计
+  messageCount Int     @default(0)
+  totalTokens  Int     @default(0)
+  
+  // AI增强设置
+  enhancedMode Boolean @default(true) // 是否启用个性、状态、技能增强
+  contextWindow Int    @default(20)   // 上下文窗口大小
+  
+  // 时间戳
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastActiveAt DateTime @default(now())
+  
+  // 关联关系
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  petId       String   @db.ObjectId
+  pet         Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  messages    Message[]
+  
+  @@map("conversations")
+}
+
+// 消息模型
+model Message {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  content     String
+  role        String   // user, assistant, system
+  
+  // 扩展的metadata
+  metadata    Json     @default("{}")
+  
+  // AI增强相关
+  personalitySnapshot Json? // 消息发送时的个性快照
+  stateSnapshot      Json? // 消息发送时的状态快照
+  skillsSnapshot     Json? // 消息发送时的技能快照
+  
+  // 消息统计
+  tokenCount  Int      @default(0)
+  
+  // 消息处理
+  isProcessed Boolean  @default(false)
+  processingTime Float? // 处理时间（秒）
+  
+  // 质量评估
+  sentiment   String?  // positive, negative, neutral
+  confidence  Float?   // 0-1之间的置信度
+  
+  // 时间戳
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  conversationId String @db.ObjectId
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
+// 宠物演化日志模型
+model PetEvolutionLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // 演化类型
+  evolutionType String // personality, skill, state, behavior
+  
+  // 变化描述
+  changeDescription String
+  triggerEvent     String? // 触发演化的事件
+  
+  // 演化数据
+  beforeSnapshot Json // 演化前的数据快照
+  afterSnapshot  Json // 演化后的数据快照
+  
+  // 演化影响
+  impactScore   Float   @default(0.0) // 演化影响程度 0-1
+  significance  String  @default("minor") // minor, moderate, major
+  
+  // 演化原因分析
+  analysisData  Json    @default("{}")
+  
+  // 时间戳
+  createdAt     DateTime @default(now())
+  
+  // 关联关系
+  petId         String   @db.ObjectId
+  pet           Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  @@map("pet_evolution_logs")
+}
+
+// 交互模式模型
+model InteractionPattern {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // 模式识别
+  patternType String   // conversation_style, topic_preference, emotional_response, etc.
+  patternName String
+  description String?
+  
+  // 模式数据
+  patternData Json     @default("{}")
+  frequency   Int      @default(1)
+  confidence  Float    @default(0.0) // 0-1之间的置信度
+  
+  // 时间统计
+  firstObserved DateTime @default(now())
+  lastObserved  DateTime @default(now())
+  observationCount Int  @default(1)
+  
+  // 模式影响
+  impact        Json    @default("{}")
+  effectiveness Float   @default(0.0) // 模式有效性评分
+  
+  // 状态
+  isActive      Boolean @default(true)
+  isRelevant    Boolean @default(true)
+  
+  // 时间戳
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // 关联关系
+  petId         String   @db.ObjectId
+  pet           Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  @@map("interaction_patterns")
+}
