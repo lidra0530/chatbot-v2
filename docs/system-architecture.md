@@ -90,11 +90,14 @@
   "_id": "ObjectId",
   "username": "string",
   "email": "string", 
-  "passwordHash": "string",
+  "password": "string",
   "avatar": "string",
+  "displayName": "string",
+  "bio": "string",
+  "isVerified": "boolean",
+  "lastLogin": "Date",
   "createdAt": "Date",
-  "updatedAt": "Date",
-  "isActive": "boolean"
+  "updatedAt": "Date"
 }
 ```
 
@@ -529,7 +532,51 @@
 - `evolution_opportunity` - 演化机会提醒
 - `disconnect` - 断开连接
 
-### 4.3 安全机制
+### 4.3 API响应结构设计
+
+#### 4.3.1 认证响应DTO拆分设计
+```typescript
+// 认证响应DTO - 登录/注册时返回
+interface AuthResponseDto {
+  accessToken: string;
+  user: UserResponseDto;
+}
+
+// 用户信息响应DTO - 用户数据返回
+interface UserResponseDto {
+  id: string;
+  email: string;
+  username: string;
+  displayName?: string;
+  bio?: string;
+  avatar?: string;
+  isVerified: boolean;
+  lastLogin?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+#### 4.3.2 宠物相关响应DTO
+```typescript
+interface PetResponseDto {
+  id: string;
+  name: string;
+  breed: string;
+  description?: string;
+  avatarUrl?: string;
+  level: number;
+  experience: number;
+  personality: PersonalityTraits;
+  currentState: PetState;
+  skillTree: SkillTree;
+  evolutionStage: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 4.4 安全机制
 - JWT Token认证
 - API限流 (Redis + 滑动窗口)
 - CORS跨域配置

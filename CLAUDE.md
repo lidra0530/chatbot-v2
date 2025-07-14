@@ -118,3 +118,11 @@ The system will include models for User, Pet, Conversation, Message, PetEvolutio
 
 ## Implementation Status
 This project follows a detailed implementation checklist (`docs/implementation-checklist.md`) with 266 specific steps across 11 major phases. Currently in early development phase with basic project infrastructure completed.
+
+## Architecture Documentation Status
+**架构文档已完成更新**
+- `docs/system-architecture.md` 已更新完成，反映了最新的设计变更：
+  - ✅ User模型的优化设计（已添加displayName、bio、isVerified、lastLogin字段）
+  - ✅ AuthResponseDto/UserResponseDto的拆分结构设计已文档化
+  - ✅ Pet模型已修复并完全符合原始架构设计
+- 所有数据模型和API结构均与当前实现保持一致
