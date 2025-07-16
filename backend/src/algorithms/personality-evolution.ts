@@ -10,7 +10,6 @@ import {
   EngagementLevel,
   EvolutionEvent,
   InteractionPattern,
-  InteractionMetadata,
   EvolutionLimits,
   PersonalityAdjustment,
   EvolutionResult,
@@ -19,7 +18,6 @@ import {
   TimeWindow,
   DEFAULT_PERSONALITY_TRAITS,
   MINIMUM_TRAIT_CHANGE,
-  MAX_SIMULTANEOUS_TRAIT_CHANGES,
   PERSONALITY_ALGORITHM_VERSION,
 } from './types/personality.types';
 
@@ -626,7 +624,7 @@ export class PersonalityEvolutionEngine {
 
   // 私有辅助方法实现
 
-  private calculateEventWeight(event: EvolutionEvent, pattern: InteractionPattern): number {
+  private calculateEventWeight(event: EvolutionEvent, _pattern: InteractionPattern): number {
     // 基于事件质量和模式一致性计算权重
     let weight = 1.0;
     
@@ -921,7 +919,7 @@ export class PersonalityEvolutionEngine {
   }
 
   private calculateAdaptiveAdjustment(
-    trait: PersonalityTrait,
+    _trait: PersonalityTrait,
     currentValue: number,
     baselineValue: number,
     petAge: number,
@@ -963,7 +961,7 @@ export class PersonalityEvolutionEngine {
     return effects.reduce((sum, effect) => sum + effect, 0) / effects.length;
   }
 
-  private async getRecentChanges(petId: string): Promise<{
+  private async getRecentChanges(_petId: string): Promise<{
     daily: Record<PersonalityTrait, number>;
     weekly: Record<PersonalityTrait, number>;
     monthly: Record<PersonalityTrait, number>;

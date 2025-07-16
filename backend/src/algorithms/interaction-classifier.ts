@@ -9,8 +9,6 @@ import {
   InteractionMode,
   EngagementLevel,
   InteractionMetadata,
-  PersonalityTrait,
-  PERSONALITY_ALGORITHM_VERSION,
 } from './types/personality.types';
 
 /**
@@ -101,7 +99,6 @@ export interface ClassificationConfig {
  */
 export class InteractionClassifier {
   private readonly config: ClassificationConfig;
-  private readonly algorithmVersion: string;
   private readonly processingStats: {
     totalClassified: number;
     averageProcessingTime: number;
@@ -111,7 +108,6 @@ export class InteractionClassifier {
 
   constructor(customConfig?: Partial<ClassificationConfig>) {
     this.config = this.mergeWithDefaultConfig(customConfig || {});
-    this.algorithmVersion = PERSONALITY_ALGORITHM_VERSION;
     this.processingStats = {
       totalClassified: 0,
       averageProcessingTime: 0,

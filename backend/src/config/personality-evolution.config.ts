@@ -10,7 +10,6 @@ import {
   EngagementLevel,
   EvolutionLimits,
   BaselineAnchoringConfig,
-  TimeWindow,
   ConfigValidationResult,
   ConfigValidationError,
   DEFAULT_PERSONALITY_TRAITS,

@@ -10,6 +10,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { PersonalityModule } from './modules/personality/personality.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { StateModule } from './modules/state/state.module';
+import { TasksModule } from './tasks/tasks.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -22,6 +23,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     PersonalityModule,
     SkillsModule,
     StateModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [
