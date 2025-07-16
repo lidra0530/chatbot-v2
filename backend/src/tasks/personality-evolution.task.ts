@@ -293,6 +293,7 @@ export class PersonalityEvolutionTask {
 
   private async handleEvolutionFailure(petId: string, interactionData: any, error: any): Promise<void> {
     try {
+      const now = new Date();
       await this.prisma.petEvolutionLog.create({
         data: {
           petId,
@@ -306,9 +307,12 @@ export class PersonalityEvolutionTask {
           analysisData: {
             error: (error as Error).message,
             interactionData,
-            timestamp: new Date(),
+            timestamp: now,
             retryCount: 3
-          }
+          },
+          yearMonth: now.toISOString().substring(0, 7),
+          dayOfWeek: now.getDay() || 7,
+          hourOfDay: now.getHours(),
         }
       });
     } catch (logError) {

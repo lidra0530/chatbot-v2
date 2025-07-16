@@ -109,6 +109,7 @@ export class PersonalityService {
       }
 
       // 记录演化事件
+      const now = new Date();
       await this.prisma.petEvolutionLog.create({
         data: {
           petId,
@@ -119,7 +120,10 @@ export class PersonalityService {
           afterSnapshot: pet.personality || {}, // 简化版本，实际应该是更新后的个性
           impactScore: 0.1,
           significance: 'minor',
-          analysisData: interactionData
+          analysisData: interactionData,
+          yearMonth: now.toISOString().substring(0, 7),
+          dayOfWeek: now.getDay() || 7,
+          hourOfDay: now.getHours(),
         }
       });
 

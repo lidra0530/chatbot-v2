@@ -585,22 +585,185 @@ interface PetResponseDto {
 
 ## 5. 核心算法设计
 
-### 5.1 个性演化算法
+### 5.1 个性演化算法 (流水线架构)
+
+#### 5.1.1 PersonalityEvolutionEngine 核心接口
 ```typescript
-interface PersonalityEvolution {
-  calculateTraitAdjustment(
-    currentTraits: PersonalityTraits,
-    interactionHistory: InteractionEvent[],
-    timeWindow: number
-  ): PersonalityChange[];
+interface PersonalityEvolutionEngine {
+  // 1. 分析近期互动模式
+  analyzeInteractionPatterns(
+    evolutionHistory: EvolutionEvent[],
+    timeWindowDays: number = 7
+  ): InteractionPattern;
   
+  // 2. 基于模式计算原始调整值
+  calculateRawAdjustment(
+    pattern: InteractionPattern,
+    currentTraits: PersonalityTraits
+  ): RawPersonalityAdjustment;
+  
+  // 3. 应用基线锚定效果
+  applyBaselineAnchoring(
+    rawAdjustment: RawPersonalityAdjustment,
+    currentTraits: PersonalityTraits,
+    baselineTraits: PersonalityTraits,
+    anchoringStrength: number = 0.1
+  ): PersonalityAdjustment;
+  
+  // 4. 应用阶梯式限制
   applyEvolutionLimits(
-    changes: PersonalityChange[],
-    evolutionRate: number,
-    traitBounds: TraitBounds
-  ): PersonalityChange[];
+    adjustment: PersonalityAdjustment,
+    limits: EvolutionLimits
+  ): FinalPersonalityAdjustment;
+  
+  // 5. 主控制器方法 - 增量计算模式
+  processPersonalityEvolution(
+    petId: string,
+    triggerType: "scheduled" | "interaction" | "manual"
+  ): Promise<EvolutionResult>;
 }
 ```
+
+#### 5.1.2 数据结构设计
+```typescript
+// 混合式事件记录结构
+interface EvolutionEvent {
+  timestamp: Date;
+  eventType: "chat_completion" | "praise" | "deep_discussion" | "silence_period";
+  impact: {
+    traits: {
+      openness: number;
+      conscientiousness: number;
+      extraversion: number;
+      agreeableness: number;
+      neuroticism: number;
+    };
+    intensity: number;    // 0.1-2.0，基于互动深度/频率调整
+    confidence: number;   // 0-1，算法对这次判断的置信度
+  };
+  context: {
+    sessionDuration?: number;
+    messageCount?: number;
+    topicDepth?: number;
+    userEngagement?: "low" | "medium" | "high";
+  };
+}
+
+// 互动模式分析结果
+interface InteractionPattern {
+  totalEvents: number;
+  averageIntensity: number;
+  dominantEventTypes: string[];
+  engagementLevel: "low" | "medium" | "high";
+  topicDiversity: number;
+  temporalDistribution: {
+    morning: number;
+    afternoon: number;
+    evening: number;
+    night: number;
+  };
+}
+
+// 演化限制配置
+interface EvolutionLimits {
+  daily: { max: number; min: number };
+  weekly: { max: number; min: number };
+  monthly: { max: number; min: number };
+  absolute: { max: number; min: number };
+  anchoringStrength: number;
+}
+```
+
+#### 5.1.3 核心计算原理
+- **增量计算机制**: 仅处理自`lastEvolutionCheck`以来的新事件，基于当前`personality.traits`快照进行计算
+- **权重驱动调整**: 使用预配置的互动权重表，根据事件类型和上下文修饰符计算特质影响
+- **时间窗口滤波**: 主要分析最近7天的互动模式，使用指数衰减降低远期事件影响
+- **基线锚定控制**: 温和的拉力机制防止个性过度偏离初始设定，保持角色一致性
+- **阶梯式边界**: 多层次限制机制（日/周/月）确保个性变化在合理范围内
+
+#### 5.1.4 配置系统设计
+```typescript
+// 互动权重配置表
+interface InteractionWeights {
+  chat_completion: {
+    base: TraitAdjustment;
+    modifiers: {
+      highEngagement: TraitAdjustment;
+      deepTopic: TraitAdjustment;
+      longSession: TraitAdjustment;
+    };
+  };
+  praise: {
+    base: TraitAdjustment;
+  };
+  silence_period: {
+    base: TraitAdjustment;
+  };
+}
+
+// 特质调整结构
+interface TraitAdjustment {
+  openness?: number;
+  conscientiousness?: number;
+  extraversion?: number;
+  agreeableness?: number;
+  neuroticism?: number;
+}
+
+// 演化结果类型
+interface EvolutionResult {
+  petId: string;
+  evolutionTriggered: boolean;
+  traitChanges: TraitAdjustment;
+  newTraits: PersonalityTraits;
+  evolutionReason: string;
+  nextEvolutionCheck: Date;
+}
+```
+
+#### 5.1.5 互动事件捕获系统
+```typescript
+// 互动分类器接口
+interface InteractionClassifier {
+  // 分析原始互动并转换为演化事件
+  classifyInteraction(
+    rawInteraction: RawInteraction,
+    contextHistory: Message[],
+    petContext: PetContext
+  ): EvolutionEvent;
+  
+  // 评估互动深度
+  evaluateInteractionDepth(
+    messageContent: string,
+    sessionContext: SessionContext
+  ): number;
+  
+  // 评估用户参与度
+  evaluateUserEngagement(
+    responseTime: number,
+    messageLength: number,
+    interactionFrequency: number
+  ): "low" | "medium" | "high";
+}
+
+// 原始互动数据
+interface RawInteraction {
+  type: "message" | "praise" | "silence" | "system_action";
+  content?: string;
+  timestamp: Date;
+  sessionDuration: number;
+  responseTime?: number;
+  metadata: Record<string, any>;
+}
+```
+
+#### 5.1.6 性能优化策略
+- **快照机制**: `personality.traits`作为当前状态快照，避免重复计算历史数据
+- **批处理计算**: 定时任务模式处理大量宠物的个性更新
+- **缓存中间结果**: 互动模式分析结果缓存30分钟
+- **分层触发**: 轻微调整实时计算，重大分析定时批处理
+- **增量处理**: 仅计算自`lastEvolutionCheck`以来的新事件
+- **实时分类**: 互动事件实时分类并记录到演化历史
 
 ### 5.2 状态驱动算法
 ```typescript
@@ -833,8 +996,9 @@ ANALYTICS_RETENTION_DAYS=90
 
 ---
 
-**文档版本**: v2.1  
+**文档版本**: v2.2  
 **创建时间**: 2025-07-11  
-**最后更新**: 2025-07-14  
+**最后更新**: 2025-07-15  
 **新增功能**: 动态个性演变、状态驱动对话、技能树系统  
+**核心算法增强**: 个性演化算法采用流水线架构，支持增量计算和性能优化  
 **技术变更**: npm → pnpm, Create React App → Vite

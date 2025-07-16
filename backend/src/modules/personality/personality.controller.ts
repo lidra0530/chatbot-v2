@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Put, Param, Body, UseGuards, HttpException, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, HttpException, HttpStatus, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PersonalityService } from './personality.service';
 import { PersonalityTraits, PersonalityAnalytics, EvolutionSettings } from './interfaces/personality.interface';
 import { IsOptional, IsBoolean, IsString, IsNumber, IsObject } from 'class-validator';
+import { EvolutionHistoryService } from './services/evolution-history.service';
+import { PersonalityCacheService } from './services/personality-cache.service';
+import { EvolutionBatchService } from './services/evolution-batch.service';
+import { EvolutionCleanupService } from './services/evolution-cleanup.service';
 
 // DTO classes for validation
 class PersonalityDetailsQuery {
@@ -65,7 +69,13 @@ class UpdateEvolutionSettingsDto {
 @UseGuards(JwtAuthGuard)
 @Controller('pets/:petId/personality')
 export class PersonalityController {
-  constructor(private readonly personalityService: PersonalityService) {}
+  constructor(
+    private readonly personalityService: PersonalityService,
+    private readonly evolutionHistoryService: EvolutionHistoryService,
+    private readonly personalityCacheService: PersonalityCacheService,
+    private readonly evolutionBatchService: EvolutionBatchService,
+    private readonly evolutionCleanupService: EvolutionCleanupService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: '获取宠物个性详情' })
@@ -296,6 +306,116 @@ export class PersonalityController {
     
     if (settings.maxMonthlyChange !== undefined && settings.maxMonthlyChange < 0) {
       throw new Error('每月最大变化不能为负数');
+    }
+  }
+
+  // 新增端点：演化历史查询 (步骤114)
+  @Get('evolution/history')
+  @ApiOperation({ summary: '获取演化历史' })
+  @ApiParam({ name: 'petId', description: '宠物ID' })
+  @ApiResponse({ status: 200, description: '成功获取演化历史' })
+  async getEvolutionHistory(
+    @Param('petId') petId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('type') evolutionType?: string,
+    @Query('significance') significance?: string,
+  ) {
+    try {
+      return await this.evolutionHistoryService.getEvolutionHistory({
+        petId,
+        page,
+        limit,
+        evolutionType,
+        significance,
+      });
+    } catch (error) {
+      throw new HttpException(
+        (error as Error).message || '获取演化历史失败',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // 新增端点：演化统计 (步骤114)
+  @Get('evolution/stats')
+  @ApiOperation({ summary: '获取演化统计信息' })
+  @ApiParam({ name: 'petId', description: '宠物ID' })
+  @ApiResponse({ status: 200, description: '成功获取演化统计' })
+  async getEvolutionStats(
+    @Param('petId') petId: string,
+    @Query('timeRange') timeRange?: string,
+  ) {
+    try {
+      return await this.evolutionHistoryService.getEvolutionStats(petId, timeRange);
+    } catch (error) {
+      throw new HttpException(
+        (error as Error).message || '获取演化统计失败',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // 新增端点：缓存管理 (步骤115)
+  @Delete('cache')
+  @ApiOperation({ summary: '清除个性缓存' })
+  @ApiParam({ name: 'petId', description: '宠物ID' })
+  @ApiResponse({ status: 200, description: '缓存清除成功' })
+  async clearPersonalityCache(@Param('petId') petId: string) {
+    try {
+      await this.personalityCacheService.invalidatePersonalityCache(petId);
+      return { message: '缓存清除成功' };
+    } catch (error) {
+      throw new HttpException(
+        (error as Error).message || '清除缓存失败',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // 新增端点：批量处理信息 (步骤116)
+  @Get('batch/:batchId')
+  @ApiOperation({ summary: '获取批处理信息' })
+  @ApiParam({ name: 'batchId', description: '批处理ID' })
+  @ApiResponse({ status: 200, description: '成功获取批处理信息' })
+  async getBatchInfo(@Param('batchId') batchId: string) {
+    try {
+      return await this.evolutionBatchService.getBatchInfo(batchId);
+    } catch (error) {
+      throw new HttpException(
+        (error as Error).message || '获取批处理信息失败',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // 新增端点：清理统计 (步骤117)
+  @Get('cleanup/stats')
+  @ApiOperation({ summary: '获取清理统计信息' })
+  @ApiResponse({ status: 200, description: '成功获取清理统计' })
+  async getCleanupStats() {
+    try {
+      return await this.evolutionCleanupService.getCleanupStats();
+    } catch (error) {
+      throw new HttpException(
+        (error as Error).message || '获取清理统计失败',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // 新增端点：手动清理 (步骤117)  
+  @Post('cleanup/manual')
+  @ApiOperation({ summary: '手动触发清理' })
+  @ApiResponse({ status: 200, description: '清理任务触发成功' })
+  async triggerManualCleanup() {
+    try {
+      return await this.evolutionCleanupService.manualCleanup();
+    } catch (error) {
+      throw new HttpException(
+        (error as Error).message || '触发清理失败',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

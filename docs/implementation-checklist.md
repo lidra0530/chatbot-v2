@@ -1,4 +1,4 @@
-# 电子宠物系统实施清单 (修订版 v2.3)
+# 电子宠物系统实施清单 (修订版 v2.4)
 
 ## 阶段一：项目基础设施搭建 (1-2天)
 
@@ -128,165 +128,209 @@
 - Implement custom decorators for API documentation
 - Add exception filters for standardized error handling"`
 
-## 阶段三：个性演化系统开发 (3-4天)
+## 阶段三：个性演化系统开发 (4-5天)
 
-### 16. 个性演化算法核心实现
-64. 创建 `src/algorithms/personality-evolution.ts` 文件
-65. 实现 `PersonalityEvolutionEngine` 类，包含特质调整算法
-66. 实现 `calculateTraitAdjustment` 方法，基于互动历史计算特质变化
-67. 实现 `applyEvolutionLimits` 方法，应用演化边界限制
-68. 实现 `analyzeInteractionPattern` 方法，分析用户互动模式
+### 16. 数据结构和接口定义
+64. 创建 `src/algorithms/types/personality.types.ts` 文件
+65. 定义 `EvolutionEvent`, `InteractionPattern`, `EvolutionLimits` 等核心接口
+66. 定义 `PersonalityAdjustment`, `EvolutionResult` 等结果类型
+67. 创建个性演化相关的枚举类型和常量
 
-### 17. 版本控制提交 - 个性算法
-69. 将个性算法文件添加到暂存区：`git add src/algorithms/personality-evolution.ts`
-70. 执行提交：`git commit -m "feat: implement personality evolution algorithm
+### 17. 个性演化配置系统
+68. 创建 `src/config/personality-evolution.config.ts` 文件
+69. 定义互动权重表 `INTERACTION_WEIGHTS` 配置
+70. 定义演化限制参数 `EVOLUTION_LIMITS` 配置
+71. 定义基线锚定和时间衰减参数配置
+72. 实现配置验证和默认值管理逻辑
 
-- Create PersonalityEvolutionEngine with trait adjustment logic
-- Add interaction pattern analysis for dynamic personality changes
-- Implement evolution limits to prevent extreme personality shifts
-- Establish foundation for AI personality development"`
+### 18. 版本控制提交 - 数据结构和配置
+73. 将类型定义和配置文件添加到暂存区：`git add src/algorithms/types/ src/config/personality-evolution.config.ts`
+74. 执行提交：`git commit -m "feat: define personality evolution data structures and configuration
 
-### 18. 个性演化配置和数据
-71. 创建个性特质到数值映射的配置文件
-72. 创建 `src/config/personality-traits.config.ts`
-73. 定义默认个性特质和演化参数
-74. 实现个性特质验证逻辑
+- Add comprehensive TypeScript interfaces for evolution system
+- Create configurable interaction weights and evolution limits
+- Define baseline anchoring and time decay parameters
+- Implement configuration validation and default management"`
 
-### 19. 版本控制提交 - 个性配置
-75. 将配置文件添加到暂存区：`git add src/config/`
-76. 执行提交：`git commit -m "feat: add personality traits configuration
+### 19. PersonalityEvolutionEngine 流水线算法核心实现
+75. 创建 `src/algorithms/personality-evolution.ts` 文件
+76. 实现 `PersonalityEvolutionEngine` 类基础结构
+77. 实现 `analyzeInteractionPatterns` 方法 - 分析互动模式并计算统计指标
+78. 实现 `calculateRawAdjustment` 方法 - 基于权重表计算原始调整值
+79. 实现 `applyBaselineAnchoring` 方法 - 应用基线锚定拉力机制
+80. 实现 `applyEvolutionLimits` 方法 - 应用阶梯式边界限制
+81. 实现 `processPersonalityEvolution` 主控制器方法 - 增量计算模式
 
-- Define personality trait mappings and evolution parameters
-- Create configurable personality boundaries and limits
-- Implement trait validation and normalization logic
-- Set up personality system configuration management"`
+### 20. 版本控制提交 - 核心算法
+82. 将核心算法文件添加到暂存区：`git add src/algorithms/personality-evolution.ts`
+83. 执行提交：`git commit -m "feat: implement personality evolution engine with pipeline architecture
 
-### 20. 个性系统服务层开发
-77. 在 `personality` 模块实现 `PersonalityService` 类
-78. 实现 `getPersonalityDetails` 方法获取宠物个性详情
-79. 实现 `triggerPersonalityAnalysis` 方法触发个性分析
-80. 实现 `updatePersonalityTraits` 方法更新个性特质
-81. 实现 `getPersonalityHistory` 方法获取演化历史
-82. 实现个性演化的定时任务机制
+- Create PersonalityEvolutionEngine with 5-stage pipeline processing
+- Implement interaction pattern analysis with statistical metrics
+- Add baseline anchoring mechanism for personality stability
+- Create evolution limits with daily/weekly/monthly boundaries
+- Implement incremental calculation mode for performance optimization"`
 
-### 21. 版本控制提交 - 个性服务
-83. 将个性服务添加到暂存区：`git add src/modules/personality/personality.service.ts`
-84. 执行提交：`git commit -m "feat: implement personality service layer
+### 21. 互动事件捕获和分类系统
+84. 创建 `src/algorithms/interaction-classifier.ts` 文件
+85. 实现 `InteractionClassifier` 类 - 分析用户互动并分类
+86. 实现互动深度评估算法（基于消息长度、话题复杂度等）
+87. 实现用户参与度评估算法（基于响应时间、互动频率等）
+88. 实现 `convertToEvolutionEvent` 方法 - 将原始互动转换为演化事件
 
-- Add personality details retrieval and management
-- Implement automatic personality analysis triggers
-- Create personality trait update mechanisms
-- Add personality evolution history tracking"`
+### 22. 版本控制提交 - 互动分类系统
+89. 将互动分类系统添加到暂存区：`git add src/algorithms/interaction-classifier.ts`
+90. 执行提交：`git commit -m "feat: implement interaction classification system
 
-### 22. 个性系统API控制器
-85. 在 `personality` 模块创建 `PersonalityController` 类
-86. 实现 `GET /api/v1/pets/:id/personality` 端点
-87. 实现 `GET /api/v1/pets/:id/personality/history` 端点
-88. 实现 `POST /api/v1/pets/:id/personality/analyze` 端点
-89. 实现 `PUT /api/v1/pets/:id/personality/settings` 端点
-90. 添加API参数验证和错误处理
+- Create InteractionClassifier for automatic event categorization
+- Add interaction depth and user engagement evaluation
+- Implement conversion from raw interactions to evolution events
+- Support real-time interaction analysis and metadata extraction"`
 
-### 23. 版本控制提交 - 个性API
-91. 将个性控制器添加到暂存区：`git add src/modules/personality/personality.controller.ts`
-92. 执行提交：`git commit -m "feat: implement personality API endpoints
+### 23. 个性系统服务层重构
+91. 更新 `src/modules/personality/personality.service.ts`
+92. 集成 `PersonalityEvolutionEngine` 和 `InteractionClassifier` 到服务层
+93. 实现 `processEvolutionIncrement` 方法 - 增量演化处理
+94. 实现 `recordInteractionEvent` 方法 - 记录互动事件到演化历史
+95. 实现 `getPersonalityAnalytics` 方法 - 获取个性分析报告
+96. 实现 `updateEvolutionSettings` 方法 - 动态调整演化参数
+97. 重构现有方法以支持新的流水线架构
 
-- Add personality details and history retrieval endpoints
-- Create personality analysis trigger endpoint
-- Implement personality settings management API
-- Add comprehensive validation and error handling"`
+### 24. 版本控制提交 - 服务层重构
+98. 将更新的服务层添加到暂存区：`git add src/modules/personality/personality.service.ts`
+99. 执行提交：`git commit -m "feat: refactor personality service with evolution engine integration
 
-### 24. 个性系统数据持久化
-93. 实现个性变化的数据库记录逻辑
-94. 实现 `PetEvolutionLog` 的创建和查询
-95. 实现个性演化历史的分页查询
-96. 创建个性数据的数据库索引优化
-97. 实现个性数据的缓存机制
+- Integrate PersonalityEvolutionEngine and InteractionClassifier
+- Implement incremental evolution processing for performance
+- Add interaction event recording with rich metadata
+- Create personality analytics and reporting capabilities
+- Support dynamic evolution parameter adjustment"`
 
-### 25. 版本控制提交 - 个性持久化
-98. 将数据持久化逻辑添加到暂存区：`git add src/modules/personality/`
-99. 执行提交：`git commit -m "feat: implement personality data persistence
+### 25. 定时任务和触发机制
+100. 创建 `src/tasks/personality-evolution.task.ts` 定时任务文件
+101. 实现批量个性演化处理定时任务
+102. 创建基于互动触发的实时演化机制
+103. 实现演化任务的错误处理和重试逻辑
+104. 配置任务调度和性能监控
 
-- Add personality evolution logging and history storage
-- Create efficient database queries for personality data
-- Implement caching mechanisms for performance optimization
-- Add database indexing for personality-related queries"`
+### 26. 个性系统API控制器增强
+105. 更新 `src/modules/personality/personality.controller.ts`
+106. 增强 `GET /api/v1/pets/:id/personality` 端点 - 支持详细分析数据
+107. 实现 `GET /api/v1/pets/:id/personality/analytics` 端点 - 个性分析报告
+108. 实现 `POST /api/v1/pets/:id/personality/trigger-evolution` 端点 - 手动触发演化
+109. 实现 `PUT /api/v1/pets/:id/personality/evolution-settings` 端点 - 演化参数调整
+110. 添加新端点的参数验证、权限控制和错误处理
+
+### 27. 版本控制提交 - 任务机制和API增强
+111. 将定时任务和API控制器添加到暂存区：`git add src/tasks/ src/modules/personality/personality.controller.ts`
+112. 执行提交：`git commit -m "feat: implement evolution scheduling and enhance personality API
+
+- Add batch personality evolution task with scheduling
+- Create real-time evolution triggers based on interactions
+- Enhance personality endpoints with analytics and manual controls
+- Implement evolution settings management API
+- Add comprehensive error handling and performance monitoring"`
+
+### 28. 数据持久化优化和缓存
+113. 优化个性演化历史的数据库存储结构
+114. 实现演化历史的高效分页查询和索引优化
+115. 创建个性分析结果的缓存机制（Redis/内存缓存）
+116. 实现演化数据的批量写入和读取优化
+117. 添加数据清理任务处理过期的演化历史
+
+### 29. 集成测试和验证
+118. 创建个性演化算法的单元测试
+119. 实现端到端的个性演化流程测试
+120. 创建性能测试验证增量计算效果
+121. 实现配置参数的边界条件测试
+122. 添加个性演化的可视化调试工具
+
+### 30. 版本控制提交 - 数据优化和测试
+123. 将数据优化和测试文件添加到暂存区：`git add src/modules/personality/ test/personality/`
+124. 执行提交：`git commit -m "feat: optimize personality data persistence and add comprehensive testing
+
+- Implement efficient evolution history storage and querying
+- Add caching mechanisms for personality analytics
+- Create comprehensive unit and integration tests
+- Add performance testing for incremental calculation
+- Implement debugging tools for evolution visualization"`
 
 ## 阶段四：状态驱动系统开发 (3-4天)
 
-### 26. 状态管理算法实现
-100. 创建 `src/algorithms/state-driver.ts` 文件
-101. 实现 `StateDriverEngine` 类，包含状态到对话的映射逻辑
-102. 实现 `generatePromptModifiers` 方法，根据状态生成提示词修饰符
-103. 实现 `calculateStateDecay` 方法，计算状态自然衰减
-104. 实现 `updateStateFromInteraction` 方法，根据互动更新状态
+### 31. 状态管理算法实现
+125. 创建 `src/algorithms/state-driver.ts` 文件
+126. 实现 `StateDriverEngine` 类，包含状态到对话的映射逻辑
+127. 实现 `generatePromptModifiers` 方法，根据状态生成提示词修饰符
+128. 实现 `calculateStateDecay` 方法，计算状态自然衰减
+129. 实现 `updateStateFromInteraction` 方法，根据互动更新状态
 
-### 27. 版本控制提交 - 状态算法
-105. 将状态算法文件添加到暂存区：`git add src/algorithms/state-driver.ts`
-106. 执行提交：`git commit -m "feat: implement state-driven conversation system
+### 32. 版本控制提交 - 状态算法
+130. 将状态算法文件添加到暂存区：`git add src/algorithms/state-driver.ts`
+131. 执行提交：`git commit -m "feat: implement state-driven conversation system
 
 - Create StateDriverEngine for state-to-conversation mapping
 - Add prompt modifier generation based on pet states
 - Implement state decay mechanisms for natural behavior
 - Create interaction-based state update logic"`
 
-### 28. 状态系统配置
-107. 创建状态影响系数的配置文件
-108. 创建 `src/config/state-mappings.config.ts`
-109. 定义状态衰减参数和边界值
-110. 实现状态验证和边界检查逻辑
+### 33. 状态系统配置
+132. 创建状态影响系数的配置文件
+133. 创建 `src/config/state-mappings.config.ts`
+134. 定义状态衰减参数和边界值
+135. 实现状态验证和边界检查逻辑
 
-### 29. 版本控制提交 - 状态配置
-111. 将状态配置添加到暂存区：`git add src/config/state-mappings.config.ts`
-112. 执行提交：`git commit -m "feat: add state system configuration
+### 34. 版本控制提交 - 状态配置
+136. 将状态配置添加到暂存区：`git add src/config/state-mappings.config.ts`
+137. 执行提交：`git commit -m "feat: add state system configuration
 
 - Define state-to-conversation mapping parameters
 - Create state decay rates and boundary definitions
 - Implement state validation and boundary checking
 - Set up configurable state behavior parameters"`
 
-### 30. 状态系统服务层开发  
-113. 在 `state` 模块实现 `StateService` 类
-114. 实现 `getCurrentState` 方法获取宠物当前状态
-115. 实现 `updatePetState` 方法更新宠物状态
-116. 实现 `processStateInteraction` 方法处理状态交互
-117. 实现 `getStateHistory` 方法获取状态历史
-118. 实现状态自动衰减的定时任务
+### 35. 状态系统服务层开发  
+138. 在 `state` 模块实现 `StateService` 类
+139. 实现 `getCurrentState` 方法获取宠物当前状态
+140. 实现 `updatePetState` 方法更新宠物状态
+141. 实现 `processStateInteraction` 方法处理状态交互
+142. 实现 `getStateHistory` 方法获取状态历史
+143. 实现状态自动衰减的定时任务
 
-### 31. 版本控制提交 - 状态服务
-119. 将状态服务添加到暂存区：`git add src/modules/state/state.service.ts`
-120. 执行提交：`git commit -m "feat: implement state management service
+### 36. 版本控制提交 - 状态服务
+144. 将状态服务添加到暂存区：`git add src/modules/state/state.service.ts`
+145. 执行提交：`git commit -m "feat: implement state management service
 
 - Add real-time pet state tracking and updates
 - Create state interaction processing logic
 - Implement automatic state decay scheduling
 - Add state history management and retrieval"`
 
-### 32. 状态系统API控制器
-121. 在 `state` 模块创建 `StateController` 类
-122. 实现 `GET /api/v1/pets/:id/state` 端点
-123. 实现 `PUT /api/v1/pets/:id/state` 端点  
-124. 实现 `POST /api/v1/pets/:id/state/interact` 端点
-125. 实现 `GET /api/v1/pets/:id/state/history` 端点
-126. 添加状态更新的验证和边界检查
+### 37. 状态系统API控制器
+146. 在 `state` 模块创建 `StateController` 类
+147. 实现 `GET /api/v1/pets/:id/state` 端点
+148. 实现 `PUT /api/v1/pets/:id/state` 端点  
+149. 实现 `POST /api/v1/pets/:id/state/interact` 端点
+150. 实现 `GET /api/v1/pets/:id/state/history` 端点
+151. 添加状态更新的验证和边界检查
 
-### 33. 版本控制提交 - 状态API
-127. 将状态控制器添加到暂存区：`git add src/modules/state/state.controller.ts`
-128. 执行提交：`git commit -m "feat: implement state management API
+### 38. 版本控制提交 - 状态API
+152. 将状态控制器添加到暂存区：`git add src/modules/state/state.controller.ts`
+153. 执行提交：`git commit -m "feat: implement state management API
 
 - Add pet state retrieval and update endpoints
 - Create state interaction processing API
 - Implement state history tracking endpoints
 - Add validation and boundary checking for state operations"`
 
-### 34. 状态系统数据持久化
-129. 实现状态变化的数据库记录
-130. 实现状态历史的高效查询
-131. 创建状态数据的数据库索引
-132. 实现状态数据的缓存策略
+### 39. 状态系统数据持久化
+154. 实现状态变化的数据库记录
+155. 实现状态历史的高效查询
+156. 创建状态数据的数据库索引
+157. 实现状态数据的缓存策略
 
-### 35. 版本控制提交 - 状态持久化
-133. 将状态持久化逻辑添加到暂存区：`git add src/modules/state/`
-134. 执行提交：`git commit -m "feat: implement state data persistence
+### 40. 版本控制提交 - 状态持久化
+158. 将状态持久化逻辑添加到暂存区：`git add src/modules/state/`
+159. 执行提交：`git commit -m "feat: implement state data persistence
 
 - Add state change logging and history storage
 - Create optimized database queries for state data
@@ -295,80 +339,80 @@
 
 ## 阶段五：技能树系统开发 (4-5天)
 
-### 36. 技能系统算法实现
-135. 创建 `src/algorithms/skill-system.ts` 文件
-136. 实现 `SkillSystemEngine` 类，包含技能解锁逻辑
-137. 实现 `evaluateUnlockConditions` 方法评估解锁条件
-138. 实现 `calculateExperienceGain` 方法计算经验获取
-139. 实现 `unlockNewSkill` 方法解锁新技能
+### 41. 技能系统算法实现
+160. 创建 `src/algorithms/skill-system.ts` 文件
+161. 实现 `SkillSystemEngine` 类，包含技能解锁逻辑
+162. 实现 `evaluateUnlockConditions` 方法评估解锁条件
+163. 实现 `calculateExperienceGain` 方法计算经验获取
+164. 实现 `unlockNewSkill` 方法解锁新技能
 
-### 37. 版本控制提交 - 技能算法
-140. 将技能算法文件添加到暂存区：`git add src/algorithms/skill-system.ts`
-141. 执行提交：`git commit -m "feat: implement skill tree system algorithm
+### 42. 版本控制提交 - 技能算法
+165. 将技能算法文件添加到暂存区：`git add src/algorithms/skill-system.ts`
+166. 执行提交：`git commit -m "feat: implement skill tree system algorithm
 
 - Create SkillSystemEngine with unlock condition evaluation
 - Add experience calculation and skill progression logic
 - Implement skill unlocking mechanisms and validation
 - Establish foundation for progressive ability development"`
 
-### 38. 技能树配置和数据
-142. 创建技能树结构的配置文件
-143. 创建 `src/config/skill-tree.config.ts`
-144. 定义技能依赖关系和解锁条件
-145. 实现技能验证和进度计算逻辑
+### 43. 技能树配置和数据
+167. 创建技能树结构的配置文件
+168. 创建 `src/config/skill-tree.config.ts`
+169. 定义技能依赖关系和解锁条件
+170. 实现技能验证和进度计算逻辑
 
-### 39. 版本控制提交 - 技能配置
-146. 将技能配置添加到暂存区：`git add src/config/skill-tree.config.ts`
-147. 执行提交：`git commit -m "feat: add skill tree configuration
+### 44. 版本控制提交 - 技能配置
+171. 将技能配置添加到暂存区：`git add src/config/skill-tree.config.ts`
+172. 执行提交：`git commit -m "feat: add skill tree configuration
 
 - Define skill tree structure and dependencies
 - Create skill unlock conditions and requirements
 - Implement skill progression and validation logic
 - Set up configurable skill development parameters"`
 
-### 40. 技能系统服务层开发
-148. 在 `skills` 模块实现 `SkillsService` 类
-149. 实现 `getSkillTree` 方法获取技能树信息
-150. 实现 `getAvailableSkills` 方法获取可解锁技能
-151. 实现 `unlockSkill` 方法解锁新技能
-152. 实现 `getCurrentAbilities` 方法获取当前能力
-153. 实现技能经验自动增长机制
+### 45. 技能系统服务层开发
+173. 在 `skills` 模块实现 `SkillsService` 类
+174. 实现 `getSkillTree` 方法获取技能树信息
+175. 实现 `getAvailableSkills` 方法获取可解锁技能
+176. 实现 `unlockSkill` 方法解锁新技能
+177. 实现 `getCurrentAbilities` 方法获取当前能力
+178. 实现技能经验自动增长机制
 
-### 41. 版本控制提交 - 技能服务
-154. 将技能服务添加到暂存区：`git add src/modules/skills/skills.service.ts`
-155. 执行提交：`git commit -m "feat: implement skills management service
+### 46. 版本控制提交 - 技能服务
+179. 将技能服务添加到暂存区：`git add src/modules/skills/skills.service.ts`
+180. 执行提交：`git commit -m "feat: implement skills management service
 
 - Add skill tree navigation and progression tracking
 - Create skill unlocking and validation logic
 - Implement automatic experience growth mechanisms
 - Add current abilities and progress retrieval"`
 
-### 42. 技能系统API控制器
-156. 在 `skills` 模块创建 `SkillsController` 类
-157. 实现 `GET /api/v1/pets/:id/skills` 端点
-158. 实现 `GET /api/v1/pets/:id/skills/available` 端点
-159. 实现 `POST /api/v1/pets/:id/skills/unlock` 端点
-160. 实现 `GET /api/v1/pets/:id/skills/abilities` 端点
-161. 添加技能操作的权限验证
+### 47. 技能系统API控制器
+181. 在 `skills` 模块创建 `SkillsController` 类
+182. 实现 `GET /api/v1/pets/:id/skills` 端点
+183. 实现 `GET /api/v1/pets/:id/skills/available` 端点
+184. 实现 `POST /api/v1/pets/:id/skills/unlock` 端点
+185. 实现 `GET /api/v1/pets/:id/skills/abilities` 端点
+186. 添加技能操作的权限验证
 
-### 43. 版本控制提交 - 技能API
-162. 将技能控制器添加到暂存区：`git add src/modules/skills/skills.controller.ts`
-163. 执行提交：`git commit -m "feat: implement skills management API
+### 48. 版本控制提交 - 技能API
+187. 将技能控制器添加到暂存区：`git add src/modules/skills/skills.controller.ts`
+188. 执行提交：`git commit -m "feat: implement skills management API
 
 - Add skill tree and progress retrieval endpoints
 - Create skill unlocking and validation API
 - Implement current abilities querying endpoints
 - Add permission validation for skill operations"`
 
-### 44. 技能系统数据持久化
-164. 实现技能进度的数据库记录
-165. 实现技能解锁历史记录
-166. 创建技能数据的数据库索引
-167. 实现技能数据的缓存机制
+### 49. 技能系统数据持久化
+189. 实现技能进度的数据库记录
+190. 实现技能解锁历史记录
+191. 创建技能数据的数据库索引
+192. 实现技能数据的缓存机制
 
-### 45. 版本控制提交 - 技能持久化
-168. 将技能持久化逻辑添加到暂存区：`git add src/modules/skills/`
-169. 执行提交：`git commit -m "feat: implement skills data persistence
+### 50. 版本控制提交 - 技能持久化
+193. 将技能持久化逻辑添加到暂存区：`git add src/modules/skills/`
+194. 执行提交：`git commit -m "feat: implement skills data persistence
 
 - Add skill progress tracking and history storage
 - Create efficient skill data queries and indexing
@@ -377,67 +421,67 @@
 
 ## 阶段六：增强对话系统集成 (3-4天)
 
-### 46. AI提示词动态生成系统
-170. 创建 `src/algorithms/prompt-generator.ts` 文件
-171. 实现 `PromptGeneratorEngine` 类
-172. 实现 `generatePersonalityPrompt` 方法，根据个性生成提示词
-173. 实现 `generateStatePrompt` 方法，根据状态生成提示词
-174. 实现 `generateSkillPrompt` 方法，根据技能生成提示词
-175. 实现 `combinePrompts` 方法，组合完整提示词
+### 51. AI提示词动态生成系统
+195. 创建 `src/algorithms/prompt-generator.ts` 文件
+196. 实现 `PromptGeneratorEngine` 类
+197. 实现 `generatePersonalityPrompt` 方法，根据个性生成提示词
+198. 实现 `generateStatePrompt` 方法，根据状态生成提示词
+199. 实现 `generateSkillPrompt` 方法，根据技能生成提示词
+200. 实现 `combinePrompts` 方法，组合完整提示词
 
-### 47. 版本控制提交 - 提示词生成
-176. 将提示词生成器添加到暂存区：`git add src/algorithms/prompt-generator.ts`
-177. 执行提交：`git commit -m "feat: implement dynamic prompt generation system
+### 52. 版本控制提交 - 提示词生成
+201. 将提示词生成器添加到暂存区：`git add src/algorithms/prompt-generator.ts`
+202. 执行提交：`git commit -m "feat: implement dynamic prompt generation system
 
 - Create PromptGeneratorEngine for context-aware prompts
 - Add personality-based prompt modification logic
 - Implement state and skill-driven prompt enhancement
 - Create intelligent prompt combination and optimization"`
 
-### 48. 通义千问API集成
-178. 创建 `src/services/qwen-api.service.ts` 文件
-179. 实现 `QwenApiService` 类，封装通义千问API调用
-180. 实现OpenAI格式的请求转换逻辑
-181. 实现API调用的错误处理和重试机制
-182. 实现API调用的限流和缓存
-183. 添加API使用统计和监控
+### 53. 通义千问API集成
+203. 创建 `src/services/qwen-api.service.ts` 文件
+204. 实现 `QwenApiService` 类，封装通义千问API调用
+205. 实现OpenAI格式的请求转换逻辑
+206. 实现API调用的错误处理和重试机制
+207. 实现API调用的限流和缓存
+208. 添加API使用统计和监控
 
-### 49. 版本控制提交 - Qwen API集成
-184. 将Qwen API服务添加到暂存区：`git add src/services/qwen-api.service.ts`
-185. 执行提交：`git commit -m "feat: integrate Qwen LLM API service
+### 54. 版本控制提交 - Qwen API集成
+209. 将Qwen API服务添加到暂存区：`git add src/services/qwen-api.service.ts`
+210. 执行提交：`git commit -m "feat: integrate Qwen LLM API service
 
 - Add QwenApiService with OpenAI-compatible interface
 - Implement request/response transformation logic
 - Add error handling, retry mechanisms, and rate limiting
 - Create API usage monitoring and statistics tracking"`
 
-### 50. 增强对话服务开发
-186. 在 `chat` 模块实现 `ChatService` 类
-187. 实现 `processEnhancedChat` 方法，集成个性、状态、技能
-188. 实现 `analyzeChatResponse` 方法，分析对话结果
-189. 实现 `updatePetFromChat` 方法，根据对话更新宠物数据
-190. 实现对话历史的智能管理
-191. 实现对话上下文的动态维护
+### 55. 增强对话服务开发
+211. 在 `chat` 模块实现 `ChatService` 类
+212. 实现 `processEnhancedChat` 方法，集成个性、状态、技能
+213. 实现 `analyzeChatResponse` 方法，分析对话结果
+214. 实现 `updatePetFromChat` 方法，根据对话更新宠物数据
+215. 实现对话历史的智能管理
+216. 实现对话上下文的动态维护
 
-### 51. 版本控制提交 - 增强对话服务
-192. 将增强对话服务添加到暂存区：`git add src/modules/chat/chat.service.ts`
-193. 执行提交：`git commit -m "feat: implement enhanced chat service
+### 56. 版本控制提交 - 增强对话服务
+217. 将增强对话服务添加到暂存区：`git add src/modules/chat/chat.service.ts`
+218. 执行提交：`git commit -m "feat: implement enhanced chat service
 
 - Create AI-enhanced chat processing with personality integration
 - Add chat response analysis and pet data updates
 - Implement intelligent conversation history management
 - Create dynamic context maintenance for conversations"`
 
-### 52. 增强对话API控制器
-194. 在 `chat` 模块更新 `ChatController` 类
-195. 实现增强版 `POST /api/v1/chat/completions` 端点
-196. 添加宠物上下文参数处理
-197. 实现对话结果的扩展响应格式
-198. 添加对话质量监控和日志记录
+### 57. 增强对话API控制器
+219. 在 `chat` 模块更新 `ChatController` 类
+220. 实现增强版 `POST /api/v1/chat/completions` 端点
+221. 添加宠物上下文参数处理
+222. 实现对话结果的扩展响应格式
+223. 添加对话质量监控和日志记录
 
-### 53. 版本控制提交 - 对话API
-199. 将对话控制器添加到暂存区：`git add src/modules/chat/chat.controller.ts`
-200. 执行提交：`git commit -m "feat: implement enhanced chat API endpoints
+### 58. 版本控制提交 - 对话API
+224. 将对话控制器添加到暂存区：`git add src/modules/chat/chat.controller.ts`
+225. 执行提交：`git commit -m "feat: implement enhanced chat API endpoints
 
 - Add personality-aware chat completion endpoint
 - Create pet context integration for conversations
@@ -446,48 +490,48 @@
 
 ## 阶段七：实时通信和WebSocket (2-3天)
 
-### 54. WebSocket网关开发
-201. 创建 `src/gateways/pet.gateway.ts` 文件
-202. 实现 `PetGateway` 类，处理WebSocket连接
-203. 实现连接认证和用户绑定机制
-204. 实现房间管理（用户-宠物会话室）
-205. 添加连接状态监控和错误处理
+### 59. WebSocket网关开发
+226. 创建 `src/gateways/pet.gateway.ts` 文件
+227. 实现 `PetGateway` 类，处理WebSocket连接
+228. 实现连接认证和用户绑定机制
+229. 实现房间管理（用户-宠物会话室）
+230. 添加连接状态监控和错误处理
 
-### 55. 版本控制提交 - WebSocket网关
-206. 将WebSocket网关添加到暂存区：`git add src/gateways/pet.gateway.ts`
-207. 执行提交：`git commit -m "feat: implement WebSocket gateway for real-time communication
+### 60. 版本控制提交 - WebSocket网关
+231. 将WebSocket网关添加到暂存区：`git add src/gateways/pet.gateway.ts`
+232. 执行提交：`git commit -m "feat: implement WebSocket gateway for real-time communication
 
 - Create PetGateway with connection management
 - Add user authentication and session binding
 - Implement room-based communication for user-pet pairs
 - Add connection monitoring and error handling"`
 
-### 56. 实时事件系统
-208. 实现 `personality_evolution` 事件推送
-209. 实现 `skill_unlocked` 事件推送
-210. 实现 `state_milestone` 事件推送
-211. 实现 `evolution_opportunity` 事件推送
-212. 实现实时消息的序列化和反序列化
+### 61. 实时事件系统
+233. 实现 `personality_evolution` 事件推送
+234. 实现 `skill_unlocked` 事件推送
+235. 实现 `state_milestone` 事件推送
+236. 实现 `evolution_opportunity` 事件推送
+237. 实现实时消息的序列化和反序列化
 
-### 57. 版本控制提交 - 事件系统
-213. 将事件系统添加到暂存区：`git add src/gateways/events/`
-214. 执行提交：`git commit -m "feat: implement real-time event system
+### 62. 版本控制提交 - 事件系统
+238. 将事件系统添加到暂存区：`git add src/gateways/events/`
+239. 执行提交：`git commit -m "feat: implement real-time event system
 
 - Add personality evolution event broadcasting
 - Create skill unlock notification system
 - Implement state milestone alerts
 - Add evolution opportunity notifications"`
 
-### 58. WebSocket服务集成
-215. 在各个服务中集成WebSocket事件发送
-216. 在个性演化时发送实时通知
-217. 在技能解锁时发送实时通知
-218. 在状态变化时发送实时通知
-219. 实现WebSocket连接的优雅断开和重连
+### 63. WebSocket服务集成
+240. 在各个服务中集成WebSocket事件发送
+241. 在个性演化时发送实时通知
+242. 在技能解锁时发送实时通知
+243. 在状态变化时发送实时通知
+244. 实现WebSocket连接的优雅断开和重连
 
-### 59. 版本控制提交 - WebSocket集成
-220. 将WebSocket集成添加到暂存区：`git add src/modules/*/`
-221. 执行提交：`git commit -m "feat: integrate WebSocket notifications across services
+### 64. 版本控制提交 - WebSocket集成
+245. 将WebSocket集成添加到暂存区：`git add src/modules/*/`
+246. 执行提交：`git commit -m "feat: integrate WebSocket notifications across services
 
 - Add real-time notifications to personality service
 - Integrate skill unlock alerts with WebSocket events
@@ -496,37 +540,37 @@
 
 ## 阶段八：前端基础界面开发 (4-5天)
 
-### 60. Redux状态管理配置
-222. 配置 Redux Toolkit store
-223. 创建 `src/store/slices/authSlice.ts`
-224. 创建 `src/store/slices/petSlice.ts`
-225. 创建 `src/store/slices/chatSlice.ts`
+### 65. Redux状态管理配置
+247. 配置 Redux Toolkit store
+248. 创建 `src/store/slices/authSlice.ts`
+249. 创建 `src/store/slices/petSlice.ts`
+250. 创建 `src/store/slices/chatSlice.ts`
 
-### 61. 版本控制提交 - Redux基础
-226. 将Redux基础配置添加到暂存区：`git add frontend/src/store/`
-227. 执行提交：`git commit -m "feat: set up Redux state management foundation
+### 66. 版本控制提交 - Redux基础
+251. 将Redux基础配置添加到暂存区：`git add frontend/src/store/`
+252. 执行提交：`git commit -m "feat: set up Redux state management foundation
 
 - Configure Redux Toolkit store with TypeScript
 - Create auth slice for user authentication state
 - Add pet slice for pet data management
 - Implement chat slice for conversation state"`
 
-### 62. AI相关状态管理
-228. 创建 `src/store/slices/personalitySlice.ts`
-229. 创建 `src/store/slices/skillsSlice.ts`
-230. 创建 `src/store/slices/stateSlice.ts`
+### 67. AI相关状态管理
+253. 创建 `src/store/slices/personalitySlice.ts`
+254. 创建 `src/store/slices/skillsSlice.ts`
+255. 创建 `src/store/slices/stateSlice.ts`
 
-### 63. 版本控制提交 - AI状态管理
-231. 将AI状态管理添加到暂存区：`git add frontend/src/store/slices/`
-232. 执行提交：`git commit -m "feat: implement AI-related state management
+### 68. 版本控制提交 - AI状态管理
+256. 将AI状态管理添加到暂存区：`git add frontend/src/store/slices/`
+257. 执行提交：`git commit -m "feat: implement AI-related state management
 
 - Create personality slice for trait tracking
 - Add skills slice for skill tree management
 - Implement state slice for pet behavior monitoring
 - Set up real-time state synchronization"`
 
-### 64. API客户端开发
-233. 创建 `src/services/api.ts` 统一API客户端（适配Vite环境变量）
+### 69. API客户端开发
+258. 创建 `src/services/api.ts` 统一API客户端（适配Vite环境变量）
 234. 实现认证相关API调用
 235. 实现宠物管理API调用
 236. 实现对话API调用
@@ -826,28 +870,42 @@
 
 ---
 
-**总计**: 350个具体实施步骤  
-**预估开发时间**: 32-42天 (单人开发)  
+**总计**: 约380个具体实施步骤 (新增32个)  
+**预估开发时间**: 37-47天 (单人开发)  
 **核心里程碑**: 
 - 第12天: 基础框架完成（包含pnpm和Vite配置）
-- 第22天: 三大核心系统完成
-- 第32天: 前端界面完成
-- 第37天: 测试优化完成
-- 第42天: 部署上线完成
+- 第26天: 个性演化系统完成（流水线架构版）
+- 第37天: 三大核心系统完成
+- 第42天: 前端界面完成
+- 第47天: 部署上线完成
 
-**版本控制策略优化 (v2.3新特性)**:
+**序号修正状态 (v2.4)**:
+- ✅ 阶段一~五: 步骤1-194 (已完全修正)
+- ✅ 阶段六~七: 步骤195-246 (已完全修正)  
+- 🔄 阶段八~十一: 需要从步骤247开始重新编号 (剩余~134步骤)
+
+**阶段三重构说明 (v2.4新特性)**:
+- 个性演化算法采用流水线架构设计
+- 新增互动事件捕获和分类系统
+- 新增增量计算模式提升性能
+- 引入快照机制和缓存优化
+- 增强配置系统和定时任务机制
+- 新增32个专门针对流水线算法和互动分类的实施步骤
+
+**版本控制策略优化 (v2.4)**:
 - 从阶段二开始采用细粒度提交策略
 - 每个功能模块完成后立即提交
 - 算法、服务、API、配置分别独立提交
 - 测试代码与功能代码同步提交
-- 共计101个独立的git提交点，平均每个阶段8-12个提交
+- 共计109个独立的git提交点，平均每个阶段9-13个提交
 
 **技术变更说明**: 
 - 所有 `npm` 命令已更新为 `pnpm`
 - 前端开发服务器端口从3000更改为5173（Vite默认）
 - Create React App替换为Vite，包含相应的配置和构建优化
-- 新增84个针对功能模块的独立提交步骤
-- 新增34个针对pnpm和Vite的特定配置步骤
+- 个性演化系统采用先进的流水线架构
+- 新增102个针对功能模块的独立提交步骤
+- 新增52个针对pnpm、Vite和流水线算法的特定配置步骤
 
 **专业版本控制策略说明**:
 - 功能导向：每个独立功能模块完成后立即提交

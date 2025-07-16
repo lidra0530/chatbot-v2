@@ -148,7 +148,7 @@ model Message {
   @@map("messages")
 }
 
-// 宠物演化日志模型
+// 宠物演化日志模型 (优化版 - 步骤113)
 model PetEvolutionLog {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   
@@ -159,7 +159,7 @@ model PetEvolutionLog {
   changeDescription String
   triggerEvent     String? // 触发演化的事件
   
-  // 演化数据
+  // 演化数据 (优化存储结构)
   beforeSnapshot Json // 演化前的数据快照
   afterSnapshot  Json // 演化后的数据快照
   
@@ -170,12 +170,32 @@ model PetEvolutionLog {
   // 演化原因分析
   analysisData  Json    @default("{}")
   
+  // 优化字段 - 便于查询和索引
+  yearMonth    String  // 格式: "2024-01", 用于分区查询
+  dayOfWeek    Int     // 1-7, 便于周期性分析
+  hourOfDay    Int     // 0-23, 便于时间模式分析
+  
+  // 批量处理标记
+  batchId      String? // 批量处理的唯一标识符
+  isProcessed  Boolean @default(false) // 是否已处理用于分析
+  
+  // 数据过期管理
+  expiresAt    DateTime? // 过期时间，用于自动清理
+  
   // 时间戳
   createdAt     DateTime @default(now())
   
   // 关联关系
   petId         String   @db.ObjectId
   pet           Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  // 索引优化
+  @@index([petId, evolutionType, createdAt])
+  @@index([petId, yearMonth])
+  @@index([significance, createdAt])
+  @@index([expiresAt], map: "evolution_expiry_index")
+  @@index([isProcessed, createdAt])
+  @@index([batchId])
   
   @@map("pet_evolution_logs")
 }
