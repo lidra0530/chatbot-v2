@@ -1,73 +1,60 @@
 import { Controller, Get, Post, Put, Param, Body, UseGuards, HttpException, HttpStatus, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PersonalityService } from './personality.service';
 import { PersonalityTraits, PersonalityAnalytics, EvolutionSettings } from './interfaces/personality.interface';
-import { IsOptional, IsBoolean, IsString, IsNumber, ValidateNested, IsObject } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsBoolean, IsString, IsNumber, IsObject } from 'class-validator';
 
 // DTO classes for validation
 class PersonalityDetailsQuery {
-  @ApiQuery({ required: false, description: '是否包含详细分析数据' })
   @IsOptional()
   @IsBoolean()
   includeAnalytics?: boolean;
 
-  @ApiQuery({ required: false, description: '是否包含演化历史' })
   @IsOptional()
   @IsBoolean()
   includeHistory?: boolean;
 }
 
 class TriggerEvolutionDto {
-  @ApiBody({ required: false, description: '触发演化的原因' })
   @IsOptional()
   @IsString()
   reason?: string;
 
-  @ApiBody({ required: false, description: '强制演化（忽略限制）' })
   @IsOptional()
   @IsBoolean()
   force?: boolean;
 }
 
 class UpdateEvolutionSettingsDto {
-  @ApiBody({ required: false, description: '是否启用演化' })
   @IsOptional()
   @IsBoolean()
   enabled?: boolean;
 
-  @ApiBody({ required: false, description: '演化速率' })
   @IsOptional()
   @IsNumber()
   evolutionRate?: number;
 
-  @ApiBody({ required: false, description: '稳定性阈值' })
   @IsOptional()
   @IsNumber()
   stabilityThreshold?: number;
 
-  @ApiBody({ required: false, description: '每日最大变化' })
   @IsOptional()
   @IsNumber()
   maxDailyChange?: number;
 
-  @ApiBody({ required: false, description: '每周最大变化' })
   @IsOptional()
   @IsNumber()
   maxWeeklyChange?: number;
 
-  @ApiBody({ required: false, description: '每月最大变化' })
   @IsOptional()
   @IsNumber()
   maxMonthlyChange?: number;
 
-  @ApiBody({ required: false, description: '特质限制' })
   @IsOptional()
   @IsObject()
   traitLimits?: any;
 
-  @ApiBody({ required: false, description: '触发器设置' })
   @IsOptional()
   @IsObject()
   triggers?: any;
@@ -105,7 +92,7 @@ export class PersonalityController {
       return details;
     } catch (error) {
       throw new HttpException(
-        error.message || '获取个性详情失败',
+        (error as Error).message || '获取个性详情失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -121,7 +108,7 @@ export class PersonalityController {
       return await this.personalityService.getPersonalityAnalytics(petId);
     } catch (error) {
       throw new HttpException(
-        error.message || '获取个性分析报告失败',
+        (error as Error).message || '获取个性分析报告失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -137,7 +124,7 @@ export class PersonalityController {
       return await this.personalityService.getPersonalityHistory(petId);
     } catch (error) {
       throw new HttpException(
-        error.message || '获取演化历史失败',
+        (error as Error).message || '获取演化历史失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -181,7 +168,7 @@ export class PersonalityController {
       };
     } catch (error) {
       throw new HttpException(
-        error.message || '触发演化失败',
+        (error as Error).message || '触发演化失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -197,7 +184,7 @@ export class PersonalityController {
       return await this.personalityService.triggerPersonalityAnalysis(petId);
     } catch (error) {
       throw new HttpException(
-        error.message || '触发个性分析失败',
+        (error as Error).message || '触发个性分析失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -232,7 +219,7 @@ export class PersonalityController {
       return await this.personalityService.updateEvolutionSettings(petId, updatedSettings);
     } catch (error) {
       throw new HttpException(
-        error.message || '更新演化设置失败',
+        (error as Error).message || '更新演化设置失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -248,7 +235,7 @@ export class PersonalityController {
       return await this.personalityService.getEvolutionSettings(petId);
     } catch (error) {
       throw new HttpException(
-        error.message || '获取演化设置失败',
+        (error as Error).message || '获取演化设置失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -271,7 +258,7 @@ export class PersonalityController {
       return await this.personalityService.updatePersonalityTraits(petId, traits);
     } catch (error) {
       throw new HttpException(
-        error.message || '更新个性设置失败',
+        (error as Error).message || '更新个性设置失败',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
