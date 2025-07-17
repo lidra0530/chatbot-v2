@@ -39,20 +39,91 @@
                        └─────────────────┘
 ```
 
-### 2.2 新增核心模块
+### 2.2 个性服务模块架构 (更新后)
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        AI个性化引擎                            │
-│  个性演变算法 + 状态对话映射 + 技能解锁逻辑                     │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            Personality Module                                  │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
+│  │   Evolution     │  │    Cache        │  │   Analytics     │                │
+│  │   Service       │  │   Service       │  │   Service       │                │
+│  │                 │  │                 │  │                 │                │
+│  │ • 个性演化计算   │  │ • Redis缓存     │  │ • 趋势分析      │                │
+│  │ • 分布式锁      │  │ • 内存回退      │  │ • 推荐生成      │                │
+│  │ • 速率限制      │  │ • 失效策略      │  │ • 数据聚合      │                │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘                │
+│           │                     │                     │                       │
+│           └─────────────────────┼─────────────────────┘                       │
+│                                 │                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
+│  │   Concurrency   │  │   Database      │  │   Error         │                │
+│  │   Control       │  │   Optimizer     │  │   Handler       │                │
+│  │                 │  │                 │  │                 │                │
+│  │ • 分布式锁      │  │ • 查询优化      │  │ • 异常分类      │                │
+│  │ • 队列处理      │  │ • 并行查询      │  │ • 重试机制      │                │
+│  │ • 速率限制      │  │ • 连接池管理    │  │ • 日志记录      │                │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘                │
+└─────────────────────────────────────────────────────────────────────────────────┘
                               │
-┌──────────────────────────────────────────────────────────────┐
-│                        提示词动态生成                           │
-│  个性特质转换 + 状态情感映射 + 技能能力注入                     │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        PersonalityEvolutionEngine                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
+│  │   Interaction   │  │   Evolution     │  │   Config        │                │
+│  │   Classifier    │  │   Pipeline      │  │   Manager       │                │
+│  │                 │  │                 │  │                 │                │
+│  │ • 事件分类      │  │ • 流水线处理    │  │ • 演化限制      │                │
+│  │ • 深度评估      │  │ • 增量计算      │  │ • 权重配置      │                │
+│  │ • 参与度分析    │  │ • 基线锚定      │  │ • 阈值管理      │                │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘                │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.3 技术架构层次
+### 2.3 服务依赖关系图
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              Service Dependencies                              │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+                    ┌─────────────────────┐
+                    │  PersonalityModule  │
+                    └──────────┬──────────┘
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+┌───────▼───────┐    ┌─────────▼─────────┐    ┌───────▼───────┐
+│  Evolution    │    │     Cache         │    │   Analytics   │
+│   Service     │    │    Service        │    │   Service     │
+└───────┬───────┘    └─────────┬─────────┘    └───────┬───────┘
+        │                      │                      │
+        │              ┌───────▼───────┐              │
+        │              │ Redis Service │              │
+        │              └───────────────┘              │
+        │                                             │
+        ├─────────────────────┬───────────────────────┤
+        │                     │                       │
+┌───────▼───────┐    ┌────────▼────────┐    ┌─────────▼─────────┐
+│  Concurrency  │    │   Database      │    │  Evolution       │
+│   Control     │    │   Optimizer     │    │  Engine          │
+└───────┬───────┘    └────────┬────────┘    └─────────┬─────────┘
+        │                     │                       │
+        │                     │                       │
+        └─────────────────────┼───────────────────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  Prisma Service   │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │    MongoDB        │
+                    └───────────────────┘
+
+External Dependencies:
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│    Redis        │    │   通义千问API    │    │   Task Queue    │
+│   (Caching)     │    │   (AI Model)    │    │  (Scheduling)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### 2.4 技术架构层次
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                        用户界面层                              │
@@ -325,55 +396,186 @@
 }
 ```
 
-#### 3.1.5 pet_evolution_logs - 宠物演化日志 (新增)
+#### 3.1.5 pet_evolution_logs - 宠物演化日志 (更新后)
 ```json
 {
   "_id": "ObjectId",
   "petId": "ObjectId",
+  "userId": "ObjectId",
+  "evolutionId": "string",
   "timestamp": "Date",
-  "evolutionType": "personality|skill|state",
+  "evolutionType": "personality",
   
+  // 个性演化详细记录
   "personalityEvolution": {
+    "beforeSnapshot": {
+      "openness": 65,
+      "conscientiousness": 70,
+      "extraversion": 45,
+      "agreeableness": 68,
+      "neuroticism": 32
+    },
+    "afterSnapshot": {
+      "openness": 67,
+      "conscientiousness": 70,
+      "extraversion": 45,
+      "agreeableness": 70,
+      "neuroticism": 30
+    },
     "traitChanges": {
-      "openness": {"from": 65, "to": 67, "change": 2},
-      "agreeableness": {"from": 70, "to": 72, "change": 2}
+      "openness": 2,
+      "agreeableness": 2,
+      "neuroticism": -2
     },
-    "trigger": "positive_feedback_sequence",
-    "triggerDetails": {
-      "actionType": "praise",
-      "frequency": 5,
-      "timespan": "24h"
+    "triggerEvent": {
+      "type": "conversation",
+      "interactionType": "casual_chat",
+      "engagementLevel": "high",
+      "topicComplexity": 0.7,
+      "emotionalIntensity": 0.8,
+      "duration": 180
+    },
+    "analysisResult": {
+      "confidence": 0.85,
+      "reason": "积极的深度对话互动",
+      "impactScore": 0.8,
+      "algorithmVersion": "1.0.0"
+    },
+    "evolutionContext": {
+      "recentPatterns": {
+        "totalInteractions": 15,
+        "averageEngagement": 0.7,
+        "dominantTopics": ["literature", "creativity"]
+      },
+      "appliedLimits": {
+        "dailyLimit": 5,
+        "weeklyLimit": 15,
+        "currentDailyUsage": 3,
+        "currentWeeklyUsage": 8
+      }
     }
   },
   
-  "skillEvolution": {
-    "category": "knowledge",
-    "branch": "literature", 
-    "experienceGained": 15,
-    "newLevel": 2,
-    "unlockedAbilities": ["creative_writing"],
-    "trigger": "topic_depth_threshold",
-    "triggerDetails": {
-      "topic": "poetry",
-      "discussionDepth": 8,
-      "requiredDepth": 5
-    }
-  },
-  
-  "stateEvolution": {
-    "stateChanges": {
-      "curiosity": {"from": 60, "to": 75, "change": 15}
-    },
-    "trigger": "new_topic_introduction",
-    "triggerDetails": {
-      "newTopic": "science",
-      "userInitiated": true
-    }
+  // 处理元数据
+  "processingMetadata": {
+    "processingTime": 150,
+    "cacheHit": false,
+    "eventsProcessed": 3,
+    "lockWaitTime": 50,
+    "databaseQueryTime": 80
   }
 }
 ```
 
-#### 3.1.6 interaction_patterns - 互动模式分析 (新增)
+#### 3.1.6 personality_cache_entries - 个性缓存条目 (新增)
+```json
+{
+  "_id": "ObjectId",
+  "cacheKey": "string",
+  "petId": "ObjectId",
+  "cacheType": "analysis|trends|recommendations",
+  "data": {
+    // 根据cacheType存储不同类型的数据
+    "personalityAnalysis": {...},
+    "trends": {...},
+    "recommendations": [...]
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "algorithm": "evolution-engine",
+    "computationTime": 250,
+    "dataPoints": 100
+  },
+  "ttl": "number", // TTL in seconds
+  "createdAt": "Date",
+  "lastAccessed": "Date",
+  "accessCount": "number"
+}
+```
+
+#### 3.1.7 personality_settings - 个性演化设置 (新增)
+```json
+{
+  "_id": "ObjectId",
+  "petId": "ObjectId",
+  "userId": "ObjectId",
+  "settings": {
+    "evolutionEnabled": true,
+    "evolutionRate": 1.0,
+    "stabilityThreshold": 0.1,
+    "maxDailyChange": 5,
+    "maxWeeklyChange": 15,
+    "maxMonthlyChange": 30,
+    "traitLimits": {
+      "openness": {"min": 0, "max": 100},
+      "conscientiousness": {"min": 0, "max": 100},
+      "extraversion": {"min": 0, "max": 100},
+      "agreeableness": {"min": 0, "max": 100},
+      "neuroticism": {"min": 0, "max": 100}
+    },
+    "triggers": {
+      "conversation": {"enabled": true, "weight": 1.0},
+      "praise": {"enabled": true, "weight": 1.5},
+      "criticism": {"enabled": true, "weight": 0.8},
+      "silence": {"enabled": true, "weight": 0.3}
+    },
+    "anchoringStrength": 0.1
+  },
+  "version": "1.0.0",
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+```
+
+#### 3.1.8 personality_analytics_cache - 分析缓存表 (新增)
+```json
+{
+  "_id": "ObjectId",
+  "petId": "ObjectId",
+  "analyticsType": "trends|stability|patterns|recommendations",
+  "timeWindow": "daily|weekly|monthly",
+  "data": {
+    "trends": {
+      "openness": {
+        "direction": "increasing",
+        "changeRate": 0.15,
+        "significance": 0.8
+      }
+    },
+    "stability": {
+      "overall": 0.85,
+      "individual": {
+        "openness": 0.7,
+        "conscientiousness": 0.9
+      }
+    },
+    "patterns": [
+      {
+        "type": "conversation",
+        "frequency": 5,
+        "impact": 0.8
+      }
+    ],
+    "recommendations": [
+      {
+        "type": "interaction",
+        "priority": "high",
+        "description": "增加创意类对话"
+      }
+    ]
+  },
+  "computationMetadata": {
+    "algorithm": "personality-analytics-v1",
+    "dataPoints": 150,
+    "confidence": 0.88,
+    "processingTime": 320
+  },
+  "expiresAt": "Date",
+  "createdAt": "Date"
+}
+```
+
+#### 3.1.9 interaction_patterns - 互动模式分析 (新增)
 ```json
 {
   "_id": "ObjectId",
@@ -465,11 +667,17 @@
 - `PUT /api/v1/pets/:id` - 更新宠物信息
 - `DELETE /api/v1/pets/:id` - 删除宠物
 
-#### 4.2.3 个性演化管理
-- `GET /api/v1/pets/:id/personality` - 获取宠物个性详情
-- `GET /api/v1/pets/:id/personality/history` - 获取个性演化历史
-- `POST /api/v1/pets/:id/personality/analyze` - 触发个性分析和调整
-- `PUT /api/v1/pets/:id/personality/settings` - 调整演化设置
+#### 4.2.3 个性演化管理 (更新后)
+- `GET /api/v1/personality/pets/:id/traits` - 获取宠物个性特质
+- `PUT /api/v1/personality/pets/:id/traits` - 更新宠物个性特质
+- `GET /api/v1/personality/pets/:id/analysis` - 获取个性分析报告
+- `GET /api/v1/personality/pets/:id/history` - 获取个性演化历史
+- `POST /api/v1/personality/pets/:id/evolve` - 触发个性演化处理
+- `GET /api/v1/personality/pets/:id/settings` - 获取演化设置
+- `PUT /api/v1/personality/pets/:id/settings` - 更新演化设置
+- `POST /api/v1/personality/batch/evolve` - 批量个性演化处理
+- `GET /api/v1/personality/analytics/:id/trends` - 获取趋势分析
+- `POST /api/v1/personality/cache/invalidate/:id` - 刷新个性缓存
 
 #### 4.2.4 状态管理系统
 - `GET /api/v1/pets/:id/state` - 获取宠物当前状态
@@ -511,12 +719,111 @@
     }
     ```
 
-#### 4.2.7 对话管理
+#### 4.2.7 个性API详细示例
+
+**获取个性特质：**
+```http
+GET /api/v1/personality/pets/{petId}/traits
+Response:
+{
+  "success": true,
+  "data": {
+    "petId": "pet-123",
+    "traits": {
+      "openness": 68,
+      "conscientiousness": 72,
+      "extraversion": 45,
+      "agreeableness": 80,
+      "neuroticism": 25
+    },
+    "lastUpdated": "2025-07-17T01:30:00Z"
+  }
+}
+```
+
+**触发个性演化：**
+```http
+POST /api/v1/personality/pets/{petId}/evolve
+Request:
+{
+  "interactionData": {
+    "userMessage": "你今天心情如何？",
+    "botResponse": "我很开心！谢谢你的关心。",
+    "interactionType": "conversation",
+    "duration": 120,
+    "emotionalTone": "positive"
+  }
+}
+Response:
+{
+  "success": true,
+  "data": {
+    "petId": "pet-123",
+    "evolutionTriggered": true,
+    "changesApplied": {
+      "openness": 2,
+      "agreeableness": 1
+    },
+    "newTraits": {
+      "openness": 70,
+      "conscientiousness": 72,
+      "extraversion": 45,
+      "agreeableness": 81,
+      "neuroticism": 25
+    },
+    "confidence": 0.85,
+    "reason": "积极的情感互动",
+    "timestamp": "2025-07-17T01:35:00Z"
+  }
+}
+```
+
+**获取个性分析：**
+```http
+GET /api/v1/personality/pets/{petId}/analysis
+Response:
+{
+  "success": true,
+  "data": {
+    "petId": "pet-123",
+    "trends": {
+      "openness": {
+        "direction": "increasing",
+        "changeRate": 0.15,
+        "significance": 0.8
+      }
+    },
+    "stability": {
+      "overall": 0.85,
+      "individual": {
+        "openness": 0.7,
+        "conscientiousness": 0.9
+      }
+    },
+    "patterns": [
+      {
+        "type": "conversation",
+        "frequency": 5,
+        "impact": 0.8
+      }
+    ],
+    "recommendations": [
+      {
+        "type": "interaction",
+        "priority": "high",
+        "description": "增加创意类对话以提升开放性"
+      }
+    ]
+  }
+}
+```
+
+#### 4.2.8 对话管理
 - `POST /api/v1/conversations` - 创建对话会话
 - `GET /api/v1/conversations` - 获取对话列表
 - `GET /api/v1/conversations/:id/messages` - 获取对话历史
 
-#### 4.2.8 分析和洞察
+#### 4.2.9 分析和洞察
 - `GET /api/v1/pets/:id/analytics` - 获取宠物成长分析
 - `GET /api/v1/pets/:id/recommendations` - 获取互动建议
 - `GET /api/v1/users/:id/interaction-patterns` - 获取用户互动模式分析

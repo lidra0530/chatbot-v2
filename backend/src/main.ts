@@ -2,8 +2,29 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { getQwenConfig, testQwenConnection } from './config/qwen.config';
 
 async function bootstrap() {
+  // 验证通义千问配置
+  try {
+    console.log('🔧 验证通义千问API配置...');
+    const qwenConfig = getQwenConfig();
+    console.log('✅ 通义千问配置验证通过');
+    
+    // 测试API连接（可选，不阻塞启动）
+    console.log('🌐 测试通义千问API连接...');
+    const isConnected = await testQwenConnection(qwenConfig);
+    if (isConnected) {
+      console.log('✅ 通义千问API连接正常');
+    } else {
+      console.warn('⚠️  通义千问API连接测试失败，但应用将继续启动');
+    }
+  } catch (error: any) {
+    console.error('❌ 通义千问配置验证失败:', error.message);
+    console.error('请检查环境变量配置，应用将退出');
+    process.exit(1);
+  }
+
   const app = await NestFactory.create(AppModule);
   
   // Set global prefix

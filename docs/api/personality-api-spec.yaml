@@ -1,0 +1,799 @@
+openapi: 3.0.3
+info:
+  title: 电子宠物个性系统 API
+  description: |
+    电子宠物个性演化系统的RESTful API规范文档
+    
+    ## 功能特性
+    - 动态个性特质管理
+    - 智能演化算法
+    - 实时分析和推荐
+    - 高性能缓存系统
+    - 批量处理支持
+    
+    ## 认证方式
+    所有API端点都需要JWT Bearer Token认证
+    
+  version: 1.0.0
+  contact:
+    name: 开发团队
+    email: developers@chatbot.local
+  license:
+    name: Private License
+    
+servers:
+  - url: http://localhost:8000/api/v1
+    description: 本地开发环境
+  - url: https://api.chatbot.local/v1
+    description: 生产环境
+
+security:
+  - bearerAuth: []
+
+paths:
+  /personality/pets/{petId}/traits:
+    get:
+      tags:
+        - Personality Management
+      summary: 获取宠物个性特质
+      description: 获取指定宠物的当前个性特质数据
+      operationId: getPersonalityTraits
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+            example: "pet-123456"
+      responses:
+        '200':
+          description: 成功获取个性特质
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonalityTraitsResponse'
+              examples:
+                success:
+                  summary: 成功示例
+                  value:
+                    success: true
+                    data:
+                      petId: "pet-123456"
+                      traits:
+                        openness: 68
+                        conscientiousness: 72
+                        extraversion: 45
+                        agreeableness: 80
+                        neuroticism: 25
+                      lastUpdated: "2025-07-17T01:30:00Z"
+                    message: "个性特质获取成功"
+                    timestamp: "2025-07-17T01:30:00Z"
+        '404':
+          $ref: '#/components/responses/PetNotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Personality Management
+      summary: 更新宠物个性特质
+      description: 直接更新宠物的个性特质值（管理员功能）
+      operationId: updatePersonalityTraits
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePersonalityTraitsRequest'
+            examples:
+              update:
+                summary: 更新示例
+                value:
+                  traits:
+                    openness: 70
+                    conscientiousness: 75
+                    extraversion: 50
+                    agreeableness: 85
+                    neuroticism: 20
+      responses:
+        '200':
+          description: 成功更新个性特质
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonalityTraitsResponse'
+
+  /personality/pets/{petId}/evolve:
+    post:
+      tags:
+        - Personality Evolution
+      summary: 触发个性演化
+      description: 基于互动数据触发宠物个性演化计算
+      operationId: triggerPersonalityEvolution
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvolutionTriggerRequest'
+            examples:
+              conversation:
+                summary: 对话触发演化
+                value:
+                  interactionData:
+                    userMessage: "你今天心情如何？"
+                    botResponse: "我很开心！谢谢你的关心。"
+                    interactionType: "conversation"
+                    duration: 120
+                    emotionalTone: "positive"
+      responses:
+        '200':
+          description: 演化处理成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvolutionResult'
+              examples:
+                evolved:
+                  summary: 成功演化
+                  value:
+                    success: true
+                    data:
+                      petId: "pet-123456"
+                      evolutionTriggered: true
+                      changesApplied:
+                        openness: 2
+                        agreeableness: 1
+                        neuroticism: -1
+                      newTraits:
+                        openness: 70
+                        conscientiousness: 72
+                        extraversion: 45
+                        agreeableness: 81
+                        neuroticism: 24
+                      confidence: 0.85
+                      reason: "积极的情感互动"
+                      timestamp: "2025-07-17T01:35:00Z"
+
+  /personality/pets/{petId}/analysis:
+    get:
+      tags:
+        - Personality Analytics
+      summary: 获取个性分析报告
+      description: 获取宠物的个性分析、趋势和推荐
+      operationId: getPersonalityAnalysis
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+        - name: timeframe
+          in: query
+          required: false
+          description: 分析时间范围
+          schema:
+            type: string
+            enum: [week, month, quarter]
+            default: month
+        - name: includeRecommendations
+          in: query
+          required: false
+          description: 是否包含推荐
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: 成功获取分析报告
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonalityAnalysisResponse'
+
+  /personality/pets/{petId}/history:
+    get:
+      tags:
+        - Personality History
+      summary: 获取个性演化历史
+      description: 获取宠物的个性演化历史记录
+      operationId: getPersonalityHistory
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: 页码
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: 每页数量
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: startDate
+          in: query
+          required: false
+          description: 开始日期
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          required: false
+          description: 结束日期
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 成功获取演化历史
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonalityHistoryResponse'
+
+  /personality/pets/{petId}/settings:
+    get:
+      tags:
+        - Personality Settings
+      summary: 获取演化设置
+      description: 获取宠物的个性演化设置参数
+      operationId: getEvolutionSettings
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取演化设置
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvolutionSettingsResponse'
+
+    put:
+      tags:
+        - Personality Settings
+      summary: 更新演化设置
+      description: 更新宠物的个性演化设置参数
+      operationId: updateEvolutionSettings
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEvolutionSettingsRequest'
+      responses:
+        '200':
+          description: 成功更新演化设置
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /personality/batch/evolve:
+    post:
+      tags:
+        - Batch Operations
+      summary: 批量个性演化
+      description: 批量处理多个宠物的个性演化
+      operationId: batchPersonalityEvolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchEvolutionRequest'
+      responses:
+        '202':
+          description: 批量任务已接受
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchOperationResponse'
+
+  /personality/cache/invalidate/{petId}:
+    post:
+      tags:
+        - Cache Management
+      summary: 刷新个性缓存
+      description: 清除指定宠物的个性相关缓存
+      operationId: invalidatePersonalityCache
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: 宠物ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 缓存刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PersonalityTraits:
+      type: object
+      properties:
+        openness:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 开放性
+        conscientiousness:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 尽责性
+        extraversion:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 外向性
+        agreeableness:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 宜人性
+        neuroticism:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 神经质
+      required:
+        - openness
+        - conscientiousness
+        - extraversion
+        - agreeableness
+        - neuroticism
+
+    PersonalityTraitsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                petId:
+                  type: string
+                traits:
+                  $ref: '#/components/schemas/PersonalityTraits'
+                lastUpdated:
+                  type: string
+                  format: date-time
+
+    InteractionData:
+      type: object
+      properties:
+        userMessage:
+          type: string
+          description: 用户消息
+        botResponse:
+          type: string
+          description: 机器人回复
+        interactionType:
+          type: string
+          enum: [conversation, praise, criticism, silence]
+          description: 互动类型
+        duration:
+          type: integer
+          minimum: 0
+          description: 互动持续时间（秒）
+        emotionalTone:
+          type: string
+          enum: [positive, neutral, negative]
+          description: 情感基调
+      required:
+        - userMessage
+        - botResponse
+        - interactionType
+
+    EvolutionTriggerRequest:
+      type: object
+      properties:
+        interactionData:
+          $ref: '#/components/schemas/InteractionData'
+      required:
+        - interactionData
+
+    EvolutionResult:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                petId:
+                  type: string
+                evolutionTriggered:
+                  type: boolean
+                changesApplied:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                newTraits:
+                  $ref: '#/components/schemas/PersonalityTraits'
+                confidence:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                reason:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+
+    PersonalityAnalysis:
+      type: object
+      properties:
+        trends:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              direction:
+                type: string
+                enum: [increasing, decreasing, stable]
+              changeRate:
+                type: number
+              significance:
+                type: number
+                minimum: 0
+                maximum: 1
+        stability:
+          type: object
+          properties:
+            overall:
+              type: number
+              minimum: 0
+              maximum: 1
+            individual:
+              type: object
+              additionalProperties:
+                type: number
+                minimum: 0
+                maximum: 1
+        patterns:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              frequency:
+                type: integer
+              impact:
+                type: number
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              priority:
+                type: string
+                enum: [high, medium, low]
+              description:
+                type: string
+
+    PersonalityAnalysisResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PersonalityAnalysis'
+
+    EvolutionHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        triggerEvent:
+          type: string
+        changesApplied:
+          type: object
+          additionalProperties:
+            type: integer
+        confidence:
+          type: number
+        reason:
+          type: string
+
+    PersonalityHistoryResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                petId:
+                  type: string
+                totalEvolutions:
+                  type: integer
+                history:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EvolutionHistoryEntry'
+                pagination:
+                  $ref: '#/components/schemas/PaginationInfo'
+
+    EvolutionSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        evolutionRate:
+          type: number
+          minimum: 0
+          maximum: 2
+        stabilityThreshold:
+          type: number
+        maxDailyChange:
+          type: integer
+        maxWeeklyChange:
+          type: integer
+        maxMonthlyChange:
+          type: integer
+        traitLimits:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              min:
+                type: integer
+              max:
+                type: integer
+
+    EvolutionSettingsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/EvolutionSettings'
+
+    UpdatePersonalityTraitsRequest:
+      type: object
+      properties:
+        traits:
+          $ref: '#/components/schemas/PersonalityTraits'
+      required:
+        - traits
+
+    UpdateEvolutionSettingsRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        evolutionRate:
+          type: number
+        stabilityThreshold:
+          type: number
+        maxDailyChange:
+          type: integer
+        maxWeeklyChange:
+          type: integer
+        maxMonthlyChange:
+          type: integer
+
+    BatchEvolutionRequest:
+      type: object
+      properties:
+        operations:
+          type: array
+          items:
+            type: object
+            properties:
+              petId:
+                type: string
+              interactionData:
+                $ref: '#/components/schemas/InteractionData'
+        mode:
+          type: string
+          enum: [sync, async]
+          default: async
+      required:
+        - operations
+
+    BatchOperationResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                batchId:
+                  type: string
+                status:
+                  type: string
+                  enum: [pending, processing, completed, failed]
+                totalOperations:
+                  type: integer
+                completedOperations:
+                  type: integer
+                estimatedTimeRemaining:
+                  type: integer
+
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - success
+        - timestamp
+
+    SuccessResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: object
+              properties:
+                code:
+                  type: string
+                message:
+                  type: string
+                details:
+                  type: object
+
+  responses:
+    Unauthorized:
+      description: 未授权访问
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorized:
+              summary: 未授权
+              value:
+                success: false
+                message: "未授权访问"
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "请提供有效的JWT Token"
+                timestamp: "2025-07-17T01:30:00Z"
+
+    PetNotFound:
+      description: 宠物不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              summary: 宠物不存在
+              value:
+                success: false
+                message: "宠物不存在"
+                error:
+                  code: "PET_NOT_FOUND"
+                  message: "指定的宠物ID不存在"
+                timestamp: "2025-07-17T01:30:00Z"
+
+    InternalError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            serverError:
+              summary: 服务器错误
+              value:
+                success: false
+                message: "服务器内部错误"
+                error:
+                  code: "INTERNAL_ERROR"
+                  message: "请稍后重试"
+                timestamp: "2025-07-17T01:30:00Z"
+
+tags:
+  - name: Personality Management
+    description: 个性特质管理相关接口
+  - name: Personality Evolution
+    description: 个性演化相关接口
+  - name: Personality Analytics
+    description: 个性分析相关接口
+  - name: Personality History
+    description: 个性历史相关接口
+  - name: Personality Settings
+    description: 演化设置相关接口
+  - name: Batch Operations
+    description: 批量操作相关接口
+  - name: Cache Management
+    description: 缓存管理相关接口
