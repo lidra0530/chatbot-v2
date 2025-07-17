@@ -12,6 +12,7 @@ import { PersonalityEvolutionService } from './services/personality-evolution.se
 import { PersonalityAnalyticsService } from './services/personality-analytics.service';
 import { PersonalityEvolutionEngine } from '../../algorithms/personality-evolution';
 import { InteractionClassifier } from '../../algorithms/interaction-classifier';
+import { DistributedLockService, RateLimitService } from './utils/concurrency-control';
 
 @Module({
   imports: [JwtModule],
@@ -31,6 +32,9 @@ import { InteractionClassifier } from '../../algorithms/interaction-classifier';
     // 算法引擎
     PersonalityEvolutionEngine,
     InteractionClassifier,
+    // 并发控制服务 (临时实现)
+    DistributedLockService,
+    RateLimitService,
   ],
   exports: [
     // 主服务和数据管理服务

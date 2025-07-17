@@ -795,7 +795,7 @@ export class PersonalityEvolutionService {
           evolutionResult.personalityAdjustment?.metadata?.originalValues || {},
         afterSnapshot: evolutionResult.newPersonalityTraits,
         impactScore: evolutionResult.personalityAdjustment?.confidence || 0.5,
-        significance: this.calculateEvolutionSignificance(evolutionResult),
+        significance: this.getEvolutionSignificanceLevel(evolutionResult),
         analysisData: {
           eventsProcessed: evolutionResult.eventsProcessed,
           processingTime: evolutionResult.processingTime,
@@ -850,7 +850,7 @@ export class PersonalityEvolutionService {
 
       const traitChanges = evolutionResult.personalityAdjustment.traitChanges;
       const totalChange = Object.values(traitChanges).reduce(
-        (sum, change) => sum + Math.abs(change),
+        (sum, change) => sum + Math.abs(change as number),
         0,
       );
       const averageChange = totalChange / Object.keys(traitChanges).length;
@@ -860,10 +860,25 @@ export class PersonalityEvolutionService {
         evolutionResult.personalityAdjustment.confidence || 0.5;
       const significance = Math.min(averageChange * confidence, 1);
 
-      return significance;
+      return isNaN(significance) ? 0 : significance;
     } catch (error) {
       this.logger.error('Failed to calculate evolution significance', error);
       return 0;
+    }
+  }
+
+  /**
+   * 获取演化意义度级别 (String类型，符合数据库schema)
+   */
+  private getEvolutionSignificanceLevel(evolutionResult: EvolutionResult): string {
+    const numericSignificance = this.calculateEvolutionSignificance(evolutionResult);
+    
+    if (numericSignificance >= 0.7) {
+      return 'major';
+    } else if (numericSignificance >= 0.3) {
+      return 'moderate';
+    } else {
+      return 'minor';
     }
   }
 
