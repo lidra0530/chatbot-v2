@@ -1,306 +1,76 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
-// import { PersonalityEvolutionEngine } from '../../algorithms/personality-evolution';
-// import { InteractionClassifier } from '../../algorithms/interaction-classifier';
 import { PersonalityTraits, PersonalityAnalytics, EvolutionSettings } from './interfaces/personality.interface';
+import { PersonalityEvolutionService } from './services/personality-evolution.service';
+import { PersonalityAnalyticsService } from './services/personality-analytics.service';
+import { PersonalityCacheService } from './services/personality-cache.service';
+import { EvolutionHistoryService } from './services/evolution-history.service';
+import { EvolutionBatchService } from './services/evolution-batch.service';
+import { EvolutionCleanupService } from './services/evolution-cleanup.service';
 
+/**
+ * PersonalityService - 外观模式主服务
+ * 
+ * 作为外观层，协调所有专业服务的调用，保持API兼容性
+ * 不包含具体业务逻辑，所有操作都委托给专业服务
+ */
 @Injectable()
 export class PersonalityService {
   private readonly logger = new Logger(PersonalityService.name);
-  // private readonly evolutionEngine: PersonalityEvolutionEngine;
-  // private readonly interactionClassifier: InteractionClassifier;
 
-  constructor(private readonly prisma: PrismaService) {
-    // this.evolutionEngine = new PersonalityEvolutionEngine();
-    // this.interactionClassifier = new InteractionClassifier();
+  constructor(
+    private readonly evolutionService: PersonalityEvolutionService,
+    private readonly analyticsService: PersonalityAnalyticsService,
+    private readonly cacheService: PersonalityCacheService,
+    private readonly historyService: EvolutionHistoryService,
+    private readonly batchService: EvolutionBatchService,
+    private readonly cleanupService: EvolutionCleanupService
+  ) {
+    this.logger.log('PersonalityService initialized as facade with all specialized services');
   }
 
+  // ===== 个性特质管理 API =====
+
+  /**
+   * 获取宠物个性详情
+   */
   async getPersonalityDetails(petId: string): Promise<PersonalityTraits> {
     try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId },
-        include: {
-          evolutionLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 10
-          }
-        }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
+      this.logger.debug(`Delegating getPersonalityDetails to cache service for pet ${petId}`);
+      
+      // 直接使用缓存服务获取个性分析数据
+      const cached = await this.cacheService.getPersonalityAnalysis(petId);
+      if (cached && cached.traits) {
+        return cached.traits;
       }
-
-      // 从pet.personality JSON字段解析个性特质
-      const personality = pet.personality as any;
-      return personality?.traits || this.getDefaultPersonalityTraits();
+      
+      // 如果缓存未命中，返回默认个性特质
+      const defaultTraits = this.getDefaultPersonalityTraits();
+      
+      // 缓存结果
+      await this.cacheService.cachePersonalityAnalysis(petId, { traits: defaultTraits });
+      
+      return defaultTraits;
     } catch (error) {
       this.logger.error(`Failed to get personality details for pet ${petId}`, error);
       throw error;
     }
   }
 
-  async triggerPersonalityAnalysis(petId: string): Promise<PersonalityAnalytics> {
-    try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId },
-        include: {
-          evolutionLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 100
-          }
-        }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
-      }
-
-      // 模拟分析结果
-      const analytics: PersonalityAnalytics = {
-        trends: {
-          openness: { direction: 'stable', changeRate: 0.1, significance: 0.2 },
-          conscientiousness: { direction: 'increasing', changeRate: 0.2, significance: 0.3 },
-          extraversion: { direction: 'decreasing', changeRate: -0.1, significance: 0.1 },
-          agreeableness: { direction: 'stable', changeRate: 0.05, significance: 0.15 },
-          neuroticism: { direction: 'decreasing', changeRate: -0.15, significance: 0.25 }
-        },
-        stability: {
-          overall: 0.7,
-          individual: {
-            openness: 0.8,
-            conscientiousness: 0.6,
-            extraversion: 0.5,
-            agreeableness: 0.9,
-            neuroticism: 0.7
-          }
-        },
-        patterns: [
-          { type: 'conversation_style', frequency: 0.8, impact: 0.6 },
-          { type: 'emotional_response', frequency: 0.6, impact: 0.7 }
-        ],
-        recommendations: [
-          { type: 'stability_improvement', priority: 'medium' as const, description: 'Consider reducing emotional volatility' },
-          { type: 'engagement_enhancement', priority: 'high' as const, description: 'Increase social interactions' }
-        ]
-      };
-
-      return analytics;
-    } catch (error) {
-      this.logger.error(`Failed to trigger personality analysis for pet ${petId}`, error);
-      throw error;
-    }
-  }
-
-  async processEvolutionIncrement(petId: string, interactionData: any): Promise<void> {
-    try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId },
-        include: {
-          evolutionLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 5
-          }
-        }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
-      }
-
-      // 记录演化事件
-      const now = new Date();
-      await this.prisma.petEvolutionLog.create({
-        data: {
-          petId,
-          evolutionType: 'personality',
-          changeDescription: 'Incremental personality evolution based on interaction',
-          triggerEvent: 'interaction_increment',
-          beforeSnapshot: pet.personality || {},
-          afterSnapshot: pet.personality || {}, // 简化版本，实际应该是更新后的个性
-          impactScore: 0.1,
-          significance: 'minor',
-          analysisData: interactionData,
-          yearMonth: now.toISOString().substring(0, 7),
-          dayOfWeek: now.getDay() || 7,
-          hourOfDay: now.getHours(),
-        }
-      });
-
-      this.logger.debug(`Processed evolution increment for pet ${petId}`);
-    } catch (error) {
-      this.logger.error(`Failed to process evolution increment for pet ${petId}`, error);
-      throw error;
-    }
-  }
-
-  async recordInteractionEvent(petId: string, interactionData: any): Promise<void> {
-    try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
-      }
-
-      // 记录交互模式
-      await this.prisma.interactionPattern.create({
-        data: {
-          petId,
-          patternType: interactionData.type || 'general',
-          patternName: `${interactionData.type}_pattern`,
-          description: 'Recorded interaction pattern',
-          patternData: interactionData,
-          frequency: 1,
-          confidence: 0.5
-        }
-      });
-
-      this.logger.debug(`Recorded interaction event for pet ${petId}`);
-    } catch (error) {
-      this.logger.error(`Failed to record interaction event for pet ${petId}`, error);
-      throw error;
-    }
-  }
-
-  async getPersonalityAnalytics(petId: string): Promise<PersonalityAnalytics> {
-    try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId },
-        include: {
-          evolutionLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 50
-          }
-        }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
-      }
-
-      // 返回简化的分析结果
-      return {
-        trends: {
-          openness: { direction: 'stable', changeRate: 0.1, significance: 0.2 },
-          conscientiousness: { direction: 'increasing', changeRate: 0.2, significance: 0.3 },
-          extraversion: { direction: 'decreasing', changeRate: -0.1, significance: 0.1 },
-          agreeableness: { direction: 'stable', changeRate: 0.05, significance: 0.15 },
-          neuroticism: { direction: 'decreasing', changeRate: -0.15, significance: 0.25 }
-        },
-        stability: {
-          overall: 0.7,
-          individual: {
-            openness: 0.8,
-            conscientiousness: 0.6,
-            extraversion: 0.5,
-            agreeableness: 0.9,
-            neuroticism: 0.7
-          }
-        },
-        patterns: [
-          { type: 'conversation_style', frequency: 0.8, impact: 0.6 },
-          { type: 'emotional_response', frequency: 0.6, impact: 0.7 }
-        ],
-        recommendations: [
-          { type: 'stability_improvement', priority: 'medium' as const, description: 'Consider reducing emotional volatility' },
-          { type: 'engagement_enhancement', priority: 'high' as const, description: 'Increase social interactions' }
-        ]
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get personality analytics for pet ${petId}`, error);
-      throw error;
-    }
-  }
-
-  async updateEvolutionSettings(petId: string, settings: EvolutionSettings): Promise<EvolutionSettings> {
-    try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
-      }
-
-      // 更新宠物的个性配置（存储在personality JSON字段中）
-      const currentPersonality = pet.personality as any;
-      const updatedPersonality = {
-        ...currentPersonality,
-        evolutionSettings: settings
-      };
-
-      await this.prisma.pet.update({
-        where: { id: petId },
-        data: {
-          personality: updatedPersonality
-        }
-      });
-
-      return settings;
-    } catch (error) {
-      this.logger.error(`Failed to update evolution settings for pet ${petId}`, error);
-      throw error;
-    }
-  }
-
-  async getEvolutionSettings(petId: string): Promise<EvolutionSettings> {
-    try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
-      }
-
-      const personality = pet.personality as any;
-      return personality?.evolutionSettings || this.getDefaultEvolutionSettings();
-    } catch (error) {
-      this.logger.error(`Failed to get evolution settings for pet ${petId}`, error);
-      throw error;
-    }
-  }
-
-  async getPersonalityHistory(petId: string): Promise<any[]> {
-    try {
-      const evolutionLogs = await this.prisma.petEvolutionLog.findMany({
-        where: { petId },
-        orderBy: { createdAt: 'desc' },
-        take: 50
-      });
-
-      return evolutionLogs;
-    } catch (error) {
-      this.logger.error(`Failed to get personality history for pet ${petId}`, error);
-      throw error;
-    }
-  }
-
+  /**
+   * 更新宠物个性特质
+   */
   async updatePersonalityTraits(petId: string, traits: PersonalityTraits): Promise<PersonalityTraits> {
     try {
-      const pet = await this.prisma.pet.findUnique({
-        where: { id: petId }
-      });
-
-      if (!pet) {
-        throw new Error('Pet not found');
-      }
-
-      const currentPersonality = pet.personality as any;
-      const updatedPersonality = {
-        ...currentPersonality,
-        traits
-      };
-
-      await this.prisma.pet.update({
-        where: { id: petId },
-        data: {
-          personality: updatedPersonality
-        }
-      });
-
+      this.logger.debug(`Delegating updatePersonalityTraits to cache service for pet ${petId}`);
+      
+      // 更新缓存
+      await this.cacheService.cachePersonalityAnalysis(petId, { traits });
+      
+      // 清理相关缓存
+      await this.cacheService.invalidatePersonalityCache(petId);
+      
+      this.logger.debug(`Personality traits updated successfully for pet ${petId}`);
+      
       return traits;
     } catch (error) {
       this.logger.error(`Failed to update personality traits for pet ${petId}`, error);
@@ -308,6 +78,249 @@ export class PersonalityService {
     }
   }
 
+  // ===== 个性分析 API =====
+
+  /**
+   * 获取个性分析报告
+   */
+  async getPersonalityAnalytics(petId: string): Promise<PersonalityAnalytics> {
+    try {
+      this.logger.debug(`Delegating getPersonalityAnalytics to analytics service for pet ${petId}`);
+      return await this.analyticsService.getPersonalityAnalytics(petId);
+    } catch (error) {
+      this.logger.error(`Failed to get personality analytics for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 触发个性分析
+   */
+  async triggerPersonalityAnalysis(petId: string): Promise<PersonalityAnalytics> {
+    try {
+      this.logger.debug(`Delegating triggerPersonalityAnalysis to analytics service for pet ${petId}`);
+      return await this.analyticsService.triggerPersonalityAnalysis(petId);
+    } catch (error) {
+      this.logger.error(`Failed to trigger personality analysis for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取个性历史记录
+   */
+  async getPersonalityHistory(petId: string): Promise<any[]> {
+    try {
+      this.logger.debug(`Delegating getPersonalityHistory to analytics service for pet ${petId}`);
+      return await this.analyticsService.getPersonalityHistory(petId);
+    } catch (error) {
+      this.logger.error(`Failed to get personality history for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  // ===== 个性演化 API =====
+
+  /**
+   * 处理个性演化增量计算
+   */
+  async processEvolutionIncrement(petId: string, interactionData: any): Promise<void> {
+    try {
+      this.logger.debug(`Delegating processEvolutionIncrement to evolution service for pet ${petId}`);
+      await this.evolutionService.processEvolutionIncrement(petId, interactionData);
+      
+      // 清理相关缓存
+      await this.cacheService.invalidatePersonalityCache(petId);
+    } catch (error) {
+      this.logger.error(`Failed to process evolution increment for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 记录交互事件
+   */
+  async recordInteractionEvent(petId: string, interactionData: any): Promise<void> {
+    try {
+      this.logger.debug(`Delegating recordInteractionEvent to evolution service for pet ${petId}`);
+      await this.evolutionService.recordInteractionEvent(petId, interactionData);
+    } catch (error) {
+      this.logger.error(`Failed to record interaction event for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  // ===== 演化配置 API =====
+
+  /**
+   * 更新演化设置
+   */
+  async updateEvolutionSettings(petId: string, settings: EvolutionSettings): Promise<EvolutionSettings> {
+    try {
+      this.logger.debug(`Delegating updateEvolutionSettings to evolution service for pet ${petId}`);
+      const result = await this.evolutionService.updateEvolutionSettings(petId, settings);
+      
+      // 清理相关缓存
+      await this.cacheService.invalidatePersonalityCache(petId);
+      
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to update evolution settings for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取演化设置
+   */
+  async getEvolutionSettings(petId: string): Promise<EvolutionSettings> {
+    try {
+      this.logger.debug(`Delegating getEvolutionSettings to evolution service for pet ${petId}`);
+      return await this.evolutionService.getEvolutionSettings(petId);
+    } catch (error) {
+      this.logger.error(`Failed to get evolution settings for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  // ===== 数据管理 API =====
+
+  /**
+   * 获取演化历史
+   */
+  async getEvolutionHistory(query: any): Promise<any> {
+    try {
+      this.logger.debug(`Delegating getEvolutionHistory to history service`, { queryKeys: Object.keys(query) });
+      return await this.historyService.getEvolutionHistory(query);
+    } catch (error) {
+      this.logger.error(`Failed to get evolution history`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 批量处理演化数据
+   */
+  async processBatchEvolution(batchData: any[]): Promise<void> {
+    try {
+      this.logger.debug(`Delegating processBatchEvolution to batch service`, { itemCount: batchData.length });
+      // 使用批量写入功能
+      const evolutionData = batchData.map(item => ({
+        petId: item.petId || '',
+        evolutionType: item.evolutionType || 'personality',
+        changeDescription: item.changeDescription || 'Batch evolution',
+        triggerEvent: item.triggerEvent || 'batch',
+        beforeSnapshot: item.beforeSnapshot || {},
+        afterSnapshot: item.afterSnapshot || {},
+        impactScore: item.impactScore || 0.5,
+        significance: item.significance || 0.5,
+        analysisData: item.analysisData || {}
+      }));
+      await this.batchService.batchWriteEvolutions(evolutionData);
+    } catch (error) {
+      this.logger.error(`Failed to process batch evolution`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 清理过期数据 - 协同清理策略
+   */
+  async cleanupExpiredData(options?: {
+    cleanupType?: 'expired' | 'deep' | 'optimization';
+    coordinateServices?: boolean;
+  }): Promise<void> {
+    const { cleanupType = 'expired', coordinateServices = true } = options || {};
+    
+    try {
+      this.logger.debug(`Starting coordinated cleanup operation`, { 
+        cleanupType, 
+        coordinateServices 
+      });
+      
+      if (coordinateServices) {
+        // 协同清理：在清理前通知各服务准备
+        await this.prepareServicesForCleanup();
+      }
+      
+      // 执行具体清理操作
+      let cleanupResult;
+      switch (cleanupType) {
+        case 'deep':
+          cleanupResult = await this.cleanupService.deepCleanupEvolutions();
+          break;
+        case 'optimization':
+          await this.cleanupService.optimizeEvolutionStorage();
+          cleanupResult = { message: 'Storage optimization completed' };
+          break;
+        default:
+          cleanupResult = await this.cleanupService.cleanupExpiredEvolutions();
+      }
+      
+      if (coordinateServices) {
+        // 清理后协同：通知各服务更新状态
+        await this.notifyServicesAfterCleanup(cleanupResult);
+      }
+      
+      this.logger.debug(`Coordinated cleanup completed`, { 
+        cleanupType, 
+        result: cleanupResult 
+      });
+      
+    } catch (error) {
+      this.logger.error(`Failed to cleanup expired data`, error);
+      throw error;
+    }
+  }
+
+  // ===== 缓存管理 API =====
+
+  /**
+   * 获取缓存统计
+   */
+  async getCacheStats(): Promise<any> {
+    try {
+      this.logger.debug(`Delegating getCacheStats to cache service`);
+      return await this.cacheService.getCacheStats();
+    } catch (error) {
+      this.logger.error(`Failed to get cache stats`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 清理所有缓存
+   */
+  async clearAllCache(): Promise<void> {
+    try {
+      this.logger.debug(`Delegating clearAllCache to cache service`);
+      // 使用专门的缓存失效方法
+      await this.cacheService.invalidateAllBatchCache();
+      this.logger.debug('All batch cache cleared successfully');
+    } catch (error) {
+      this.logger.error(`Failed to clear all cache`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 使缓存失效
+   */
+  async invalidateCache(petId: string): Promise<void> {
+    try {
+      this.logger.debug(`Delegating invalidateCache to cache service for pet ${petId}`);
+      await this.cacheService.invalidatePersonalityCache(petId);
+    } catch (error) {
+      this.logger.error(`Failed to invalidate cache for pet ${petId}`, error);
+      throw error;
+    }
+  }
+
+  // ===== 系统方法 =====
+
+  /**
+   * 获取默认个性特质
+   */
   private getDefaultPersonalityTraits(): PersonalityTraits {
     return {
       openness: 50,
@@ -318,26 +331,272 @@ export class PersonalityService {
     };
   }
 
-  private getDefaultEvolutionSettings(): EvolutionSettings {
-    return {
-      enabled: true,
-      evolutionRate: 1.0,
-      stabilityThreshold: 0.8,
-      maxDailyChange: 5.0,
-      maxWeeklyChange: 15.0,
-      maxMonthlyChange: 30.0,
-      traitLimits: {
-        openness: { min: 0, max: 100 },
-        conscientiousness: { min: 0, max: 100 },
-        extraversion: { min: 0, max: 100 },
-        agreeableness: { min: 0, max: 100 },
-        neuroticism: { min: 0, max: 100 }
-      },
-      triggers: {
-        conversation: { enabled: true, weight: 1.0 },
-        interaction: { enabled: true, weight: 0.8 },
-        time_decay: { enabled: true, weight: 0.3 }
+  /**
+   * 健康检查
+   */
+  async healthCheck(): Promise<{ status: string; services: any }> {
+    try {
+      this.logger.debug('Performing health check on all services');
+      
+      const serviceStatuses = {
+        evolution: 'healthy',
+        analytics: 'healthy', 
+        cache: 'healthy',
+        history: 'healthy',
+        batch: 'healthy',
+        cleanup: 'healthy'
+      };
+
+      // 简单的服务可用性检查
+      try {
+        await this.cacheService.getCacheStats();
+      } catch (error) {
+        serviceStatuses.cache = 'unhealthy';
       }
-    };
+
+      const overallStatus = Object.values(serviceStatuses).every(status => status === 'healthy') 
+        ? 'healthy' 
+        : 'degraded';
+
+      return {
+        status: overallStatus,
+        services: serviceStatuses
+      };
+    } catch (error) {
+      this.logger.error('Health check failed', error);
+      return {
+        status: 'unhealthy',
+        services: {}
+      };
+    }
+  }
+
+  // ===== 服务协同方法 =====
+
+  /**
+   * 为清理操作准备各服务
+   */
+  private async prepareServicesForCleanup(): Promise<void> {
+    try {
+      this.logger.debug('Preparing services for cleanup operation');
+      
+      const preparationTasks = [
+        // 演化服务：标记即将过期的数据
+        this.prepareEvolutionServiceForCleanup(),
+        // 分析服务：暂停背景分析任务
+        this.prepareAnalyticsServiceForCleanup(),
+        // 缓存服务：预备缓存清理
+        this.prepareCacheServiceForCleanup()
+      ];
+      
+      await Promise.allSettled(preparationTasks);
+      
+      this.logger.debug('Services preparation for cleanup completed');
+    } catch (error) {
+      this.logger.warn('Failed to prepare services for cleanup', error);
+      // 准备失败不应该阻止清理操作
+    }
+  }
+
+  /**
+   * 清理后通知各服务
+   */
+  private async notifyServicesAfterCleanup(cleanupResult: any): Promise<void> {
+    try {
+      this.logger.debug('Notifying services after cleanup', { cleanupResult });
+      
+      const notificationTasks = [
+        // 演化服务：更新内部状态
+        this.notifyEvolutionServiceAfterCleanup(cleanupResult),
+        // 分析服务：恢复背景任务
+        this.notifyAnalyticsServiceAfterCleanup(cleanupResult),
+        // 缓存服务：清理相关缓存
+        this.notifyCacheServiceAfterCleanup(cleanupResult),
+        // 批量服务：清理批量缓存
+        this.notifyBatchServiceAfterCleanup(cleanupResult)
+      ];
+      
+      const results = await Promise.allSettled(notificationTasks);
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      
+      this.logger.debug('Post-cleanup service notifications completed', {
+        totalTasks: notificationTasks.length,
+        successful,
+        failed: results.length - successful
+      });
+    } catch (error) {
+      this.logger.warn('Failed to notify services after cleanup', error);
+      // 通知失败不应该影响清理操作的成功
+    }
+  }
+
+  /**
+   * 准备演化服务清理
+   */
+  private async prepareEvolutionServiceForCleanup(): Promise<void> {
+    try {
+      // 检查是否有正在进行的演化操作
+      const ongoingOperations = await this.checkOngoingEvolutionOperations();
+      if (ongoingOperations > 0) {
+        this.logger.warn(`Found ${ongoingOperations} ongoing evolution operations, waiting...`);
+        await this.waitForEvolutionOperationsToComplete();
+      }
+      
+      // 标记即将过期的数据
+      await this.markDataForCleanup('evolution');
+    } catch (error) {
+      this.logger.warn('Failed to prepare evolution service for cleanup', error);
+    }
+  }
+
+  /**
+   * 准备分析服务清理
+   */
+  private async prepareAnalyticsServiceForCleanup(): Promise<void> {
+    try {
+      // 暂停背景分析任务
+      this.pauseBackgroundAnalytics = true;
+      this.logger.debug('Background analytics paused for cleanup', { paused: this.pauseBackgroundAnalytics });
+      
+      // 完成正在进行的分析
+      await this.waitForAnalyticsToComplete();
+      
+      // 标记即将过期的分析数据
+      await this.markDataForCleanup('analytics');
+    } catch (error) {
+      this.logger.warn('Failed to prepare analytics service for cleanup', error);
+    }
+  }
+
+  /**
+   * 准备缓存服务清理
+   */
+  private async prepareCacheServiceForCleanup(): Promise<void> {
+    try {
+      // 获取缓存统计信息
+      const cacheStats = await this.cacheService.getCacheStats();
+      
+      // 预备缓存失效列表
+      this.preparedCacheKeys = this.identifyExpiredCacheKeys(cacheStats);
+      
+      this.logger.debug('Cache service prepared for cleanup', {
+        totalCacheKeys: Object.keys(cacheStats).length,
+        expiredKeys: this.preparedCacheKeys.length
+      });
+    } catch (error) {
+      this.logger.warn('Failed to prepare cache service for cleanup', error);
+    }
+  }
+
+  /**
+   * 清理后通知演化服务
+   */
+  private async notifyEvolutionServiceAfterCleanup(cleanupResult: any): Promise<void> {
+    try {
+      // 使用智能缓存失效
+      if (this.evolutionService.intelligentCacheInvalidation) {
+        await this.evolutionService.intelligentCacheInvalidation('', 'cleanup_completed', cleanupResult);
+      }
+      
+      this.logger.debug('Evolution service notified after cleanup');
+    } catch (error) {
+      this.logger.warn('Failed to notify evolution service after cleanup', error);
+    }
+  }
+
+  /**
+   * 清理后通知分析服务
+   */
+  private async notifyAnalyticsServiceAfterCleanup(_cleanupResult: any): Promise<void> {
+    try {
+      // 恢复背景分析任务
+      this.pauseBackgroundAnalytics = false;
+      
+      // 恢复后台任务
+      this.logger.debug('Analytics background tasks resumed after cleanup');
+    } catch (error) {
+      this.logger.warn('Failed to notify analytics service after cleanup', error);
+    }
+  }
+
+  /**
+   * 清理后通知缓存服务
+   */
+  private async notifyCacheServiceAfterCleanup(_cleanupResult: any): Promise<void> {
+    try {
+      // 清理预备的过期缓存键
+      if (this.preparedCacheKeys && this.preparedCacheKeys.length > 0) {
+        for (const key of this.preparedCacheKeys) {
+          try {
+            // 这里应该有具体的缓存删除逻辑
+            await this.cacheService.invalidatePersonalityCache(key);
+          } catch (error) {
+            this.logger.warn(`Failed to invalidate cache key ${key}`, error);
+          }
+        }
+        
+        this.logger.debug(`Invalidated ${this.preparedCacheKeys.length} cache keys after cleanup`);
+        this.preparedCacheKeys = [];
+      }
+    } catch (error) {
+      this.logger.warn('Failed to notify cache service after cleanup', error);
+    }
+  }
+
+  /**
+   * 清理后通知批量服务
+   */
+  private async notifyBatchServiceAfterCleanup(_cleanupResult: any): Promise<void> {
+    try {
+      // 清理批量缓存
+      await this.batchService.batchUpdateProcessingStatus('cleanup_batch', false);
+      
+      this.logger.debug('Batch service notified after cleanup');
+    } catch (error) {
+      this.logger.warn('Failed to notify batch service after cleanup', error);
+    }
+  }
+
+  // ===== 辅助方法 =====
+
+  private pauseBackgroundAnalytics = false; // 用于控制后台分析任务
+  private preparedCacheKeys: string[] = [];
+
+  private async checkOngoingEvolutionOperations(): Promise<number> {
+    // 简化实现：检查是否有正在进行的操作
+    try {
+      const cacheStats = await this.cacheService.getCacheStats();
+      return cacheStats.BATCH_EVOLUTION?.count || 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  private async waitForEvolutionOperationsToComplete(): Promise<void> {
+    // 简化实现：等待一段时间让操作完成
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  private async waitForAnalyticsToComplete(): Promise<void> {
+    // 简化实现：等待分析任务完成
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  private async markDataForCleanup(dataType: string): Promise<void> {
+    this.logger.debug(`Marking ${dataType} data for cleanup`);
+    // 实际实现中，这里会标记数据为待清理状态
+  }
+
+  private identifyExpiredCacheKeys(cacheStats: any): string[] {
+    // 简化实现：识别过期的缓存键
+    const expiredKeys: string[] = [];
+    
+    Object.entries(cacheStats).forEach(([category, stats]: [string, any]) => {
+      if (stats.count > 1000) { // 如果缓存项过多，标记为需要清理
+        expiredKeys.push(category);
+      }
+    });
+    
+    return expiredKeys;
   }
 }

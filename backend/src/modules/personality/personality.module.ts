@@ -8,11 +8,16 @@ import { EvolutionHistoryService } from './services/evolution-history.service';
 import { PersonalityCacheService } from './services/personality-cache.service';
 import { EvolutionBatchService } from './services/evolution-batch.service';
 import { EvolutionCleanupService } from './services/evolution-cleanup.service';
+import { PersonalityEvolutionService } from './services/personality-evolution.service';
+import { PersonalityAnalyticsService } from './services/personality-analytics.service';
+import { PersonalityEvolutionEngine } from '../../algorithms/personality-evolution';
+import { InteractionClassifier } from '../../algorithms/interaction-classifier';
 
 @Module({
   imports: [JwtModule],
   controllers: [PersonalityController],
   providers: [
+    // 现有服务保持不变
     PersonalityService,
     PrismaService,
     RedisService,
@@ -20,13 +25,26 @@ import { EvolutionCleanupService } from './services/evolution-cleanup.service';
     PersonalityCacheService,
     EvolutionBatchService,
     EvolutionCleanupService,
+    // 新增的业务逻辑服务
+    PersonalityEvolutionService,
+    PersonalityAnalyticsService,
+    // 算法引擎
+    PersonalityEvolutionEngine,
+    InteractionClassifier,
   ],
   exports: [
+    // 主服务和数据管理服务
     PersonalityService,
     EvolutionHistoryService,
     PersonalityCacheService,
     EvolutionBatchService,
     EvolutionCleanupService,
+    // 新增的业务逻辑服务
+    PersonalityEvolutionService,
+    PersonalityAnalyticsService,
+    // 算法引擎
+    PersonalityEvolutionEngine,
+    InteractionClassifier,
   ],
 })
 export class PersonalityModule {}

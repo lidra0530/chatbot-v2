@@ -100,6 +100,59 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  // 扩展方法用于并发控制
+  async setNX(key: string, value: any, ttl?: number): Promise<boolean> {
+    try {
+      const serialized = JSON.stringify(value);
+      let result;
+      if (ttl) {
+        result = await this.redis.set(key, serialized, 'EX', ttl, 'NX');
+      } else {
+        result = await this.redis.set(key, serialized, 'NX');
+      }
+      return result === 'OK';
+    } catch (error) {
+      this.logger.error(`Redis SETNX error for key ${key}:`, error);
+      return false;
+    }
+  }
+
+  async eval(script: string, keys: string[], args: string[]): Promise<any> {
+    try {
+      return await this.redis.eval(script, keys.length, ...keys, ...args);
+    } catch (error) {
+      this.logger.error(`Redis EVAL error:`, error);
+      throw error;
+    }
+  }
+
+  async zadd(key: string, score: number, member: string): Promise<number> {
+    try {
+      return await this.redis.zadd(key, score, member);
+    } catch (error) {
+      this.logger.error(`Redis ZADD error for key ${key}:`, error);
+      return 0;
+    }
+  }
+
+  async zpopmax(key: string): Promise<string[]> {
+    try {
+      return await this.redis.zpopmax(key);
+    } catch (error) {
+      this.logger.error(`Redis ZPOPMAX error for key ${key}:`, error);
+      return [];
+    }
+  }
+
+  async zcard(key: string): Promise<number> {
+    try {
+      return await this.redis.zcard(key);
+    } catch (error) {
+      this.logger.error(`Redis ZCARD error for key ${key}:`, error);
+      return 0;
+    }
+  }
+
   async onModuleDestroy() {
     if (this.redis) {
       await this.redis.quit();
