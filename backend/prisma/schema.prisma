@@ -73,6 +73,9 @@ model Pet {
   conversations   Conversation[]
   evolutionLogs   PetEvolutionLog[]
   interactionPatterns InteractionPattern[]
+  skillProgresses SkillProgress[]
+  skillUnlockHistory SkillUnlockHistory[]
+  skillExperienceHistory SkillExperienceHistory[]
   
   @@map("pets")
 }
@@ -236,4 +239,174 @@ model InteractionPattern {
   pet           Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
   
   @@map("interaction_patterns")
+}
+
+// 技能进度模型 (步骤189)
+model SkillProgress {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // 技能标识
+  skillId     String   // 技能定义ID
+  skillName   String   // 技能名称 (冗余存储便于查询)
+  skillType   String   // 技能类型
+  rarity      String   // 技能稀有度
+  
+  // 进度数据
+  level              Int     @default(1)
+  experience         Int     @default(0)
+  experienceRequired Int     @default(100)
+  status             String  @default("locked") // locked, available, unlocked, mastered
+  
+  // 掌握度和使用统计
+  masteryProgress    Float   @default(0.0) // 0-1 掌握程度
+  usageCount         Int     @default(0)
+  totalExperienceGained Int  @default(0)
+  
+  // 能力效果
+  currentAbilities   Json    @default("[]") // 当前解锁的能力列表
+  effectiveBonus     Float   @default(1.0)  // 有效性加成
+  
+  // 时间追踪
+  unlockedAt         DateTime?
+  lastUsed           DateTime?
+  lastExperienceGain DateTime?
+  
+  // 性能优化字段
+  isActive           Boolean @default(true)
+  cacheVersion       Int     @default(1) // 缓存版本控制
+  
+  // 时间戳
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // 关联关系
+  petId              String   @db.ObjectId
+  pet                Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  // 解锁历史记录
+  unlockHistory      SkillUnlockHistory[]
+  experienceHistory  SkillExperienceHistory[]
+  
+  // 复合索引优化
+  @@index([petId, skillId], map: "pet_skill_unique")
+  @@index([petId, status, level])
+  @@index([skillType, level])
+  @@index([rarity, level])
+  @@index([lastUsed])
+  @@index([cacheVersion, updatedAt])
+  
+  @@map("skill_progress")
+}
+
+// 技能解锁历史记录模型 (步骤190)
+model SkillUnlockHistory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // 解锁信息
+  skillId     String   // 技能定义ID
+  skillName   String   // 技能名称
+  skillType   String   // 技能类型
+  rarity      String   // 技能稀有度
+  
+  // 解锁条件和过程
+  unlockConditions Json    // 解锁时的条件检查结果
+  triggerEvent     String? // 触发解锁的事件
+  unlockMethod     String  @default("normal") // normal, auto, debug, admin
+  
+  // 解锁时的宠物状态
+  petLevel         Int
+  petStateSnapshot Json    // 宠物状态快照
+  prerequisiteSkills Json  // 前置技能满足情况
+  
+  // 解锁奖励和效果
+  experienceReward Int     @default(0)
+  unlockedAbilities Json   @default("[]")
+  bonusEffects     Json    @default("[]")
+  
+  // 解锁影响分析
+  impactScore      Float   @default(0.0) // 解锁的影响程度
+  difficultyScore  Float   @default(0.0) // 解锁难度评分
+  
+  // 解锁统计
+  attemptCount     Int     @default(1) // 尝试解锁次数
+  timeToUnlock     Int?    // 从可解锁到实际解锁的时间(分钟)
+  
+  // 性能和管理
+  processingTime   Float?  // 解锁处理时间(毫秒)
+  isValid          Boolean @default(true) // 解锁记录有效性
+  
+  // 时间戳
+  unlockedAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  
+  // 关联关系
+  petId            String      @db.ObjectId
+  pet              Pet         @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  skillProgressId  String      @db.ObjectId
+  skillProgress    SkillProgress @relation(fields: [skillProgressId], references: [id], onDelete: Cascade)
+  
+  // 索引优化
+  @@index([petId, unlockedAt])
+  @@index([skillId, unlockedAt])
+  @@index([skillType, rarity])
+  @@index([unlockMethod, unlockedAt])
+  @@index([impactScore])
+  @@index([petLevel, unlockedAt])
+  
+  @@map("skill_unlock_history")
+}
+
+// 技能经验历史记录模型
+model SkillExperienceHistory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // 经验获得信息
+  skillId     String   // 技能定义ID
+  experienceGained Int  // 获得的经验值
+  experienceBefore Int  // 获得前的经验值
+  experienceAfter  Int  // 获得后的经验值
+  
+  // 经验来源
+  sourceType  String   // interaction, auto_growth, admin, quest, achievement
+  sourceDetail Json    @default("{}") // 详细来源信息
+  
+  // 等级变化
+  levelBefore Int
+  levelAfter  Int
+  leveledUp   Boolean @default(false)
+  
+  // 经验计算详情
+  baseExperience    Int    @default(0)  // 基础经验值
+  multiplier        Float  @default(1.0) // 经验倍数
+  bonusExperience   Int    @default(0)  // 奖励经验
+  
+  // 触发条件
+  interactionType   String? // 交互类型
+  intensity         Float?  // 强度
+  duration          Int?    // 持续时间(秒)
+  contextFactors    Json    @default("{}") // 上下文因素
+  
+  // 性能数据
+  calculationTime   Float?  // 计算时间(毫秒)
+  
+  // 时间戳
+  gainedAt          DateTime @default(now())
+  createdAt         DateTime @default(now())
+  
+  // 关联关系
+  petId             String      @db.ObjectId
+  pet               Pet         @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  skillProgressId   String      @db.ObjectId
+  skillProgress     SkillProgress @relation(fields: [skillProgressId], references: [id], onDelete: Cascade)
+  
+  // 索引优化
+  @@index([petId, gainedAt])
+  @@index([skillId, gainedAt])
+  @@index([sourceType, gainedAt])
+  @@index([leveledUp, gainedAt])
+  @@index([petId, skillId, gainedAt])
+  
+  @@map("skill_experience_history")
 }

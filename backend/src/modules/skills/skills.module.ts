@@ -3,6 +3,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { SkillsController } from './skills.controller';
 import { SkillsService } from './skills.service';
 import { PrismaService } from '../../common/prisma.service';
+import { SkillsCacheService } from './services/skills-cache.service';
+import { SkillsPersistenceService } from './services/skills-persistence.service';
 
 /**
  * 步骤167: 技能树系统模块
@@ -13,8 +15,10 @@ import { PrismaService } from '../../common/prisma.service';
   controllers: [SkillsController],
   providers: [
     SkillsService,
+    SkillsCacheService,
+    SkillsPersistenceService,
     PrismaService
   ],
-  exports: [SkillsService]
+  exports: [SkillsService, SkillsCacheService, SkillsPersistenceService]
 })
 export class SkillsModule {}

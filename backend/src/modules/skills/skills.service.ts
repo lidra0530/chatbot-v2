@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { PrismaService } from '../../common/prisma.service';
 import { SkillSystemEngine, PetSkillProgress, SkillStatus } from '../../algorithms/skill-system';
 import { SKILL_DEFINITIONS_MAP, SKILL_SYSTEM_CONFIG } from '../../config/skill-mappings.config';
+import { SkillsPersistenceService } from './services/skills-persistence.service';
 import {
   SkillDto,
   SkillExperienceGainDto,
@@ -28,9 +29,12 @@ export class SkillsService {
   private readonly logger = new Logger(SkillsService.name);
   private readonly skillEngine: SkillSystemEngine;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private persistenceService: SkillsPersistenceService
+  ) {
     this.skillEngine = new SkillSystemEngine(SKILL_DEFINITIONS_MAP, SKILL_SYSTEM_CONFIG);
-    this.logger.log('SkillsService initialized with SkillSystemEngine');
+    this.logger.log('SkillsService initialized with SkillSystemEngine and PersistenceService');
   }
 
   /**
@@ -601,10 +605,8 @@ export class SkillsService {
 
   // 私有辅助方法
 
-  private async getPetSkillsMap(_petId: string): Promise<Map<string, PetSkillProgress>> {
-    // 这里应该从数据库获取技能进度，暂时返回空Map
-    // TODO: 实现数据库集成
-    return new Map();
+  private async getPetSkillsMap(petId: string): Promise<Map<string, PetSkillProgress>> {
+    return this.persistenceService.getPetSkillsMap(petId);
   }
 
   private async buildPetDataForEngine(pet: any): Promise<any> {
@@ -638,8 +640,7 @@ export class SkillsService {
   }
 
   private async saveSkillProgress(petId: string, progress: PetSkillProgress): Promise<void> {
-    // TODO: 实现技能进度保存到数据库
-    this.logger.debug(`Saving skill progress for pet ${petId}, skill ${progress.skillId}`);
+    await this.persistenceService.saveSkillProgress(petId, progress);
   }
 
   private estimateUnlockTime(failedConditions: string[]): string | undefined {
