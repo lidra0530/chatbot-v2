@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { StateController } from './state.controller';
 import { StateService } from './state.service';
+import { StatePersistenceService } from './services/state-persistence.service';
 import { PrismaService } from '../../common/prisma.service';
 
 @Module({
@@ -11,7 +12,11 @@ import { PrismaService } from '../../common/prisma.service';
     ScheduleModule.forRoot()
   ],
   controllers: [StateController],
-  providers: [StateService, PrismaService],
-  exports: [StateService],
+  providers: [
+    StateService, 
+    StatePersistenceService,
+    PrismaService
+  ],
+  exports: [StateService, StatePersistenceService],
 })
 export class StateModule {}

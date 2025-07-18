@@ -8,6 +8,7 @@ import {
   enforceStateBoundaries
 } from '../../config/state-mappings.config';
 import { StateUpdateDto, StateInteractionDto, StateHistoryDto, StateUpdateTrigger } from './dto';
+import { StatePersistenceService } from './services/state-persistence.service';
 
 /**
  * 状态系统服务类
@@ -18,7 +19,10 @@ export class StateService {
   private readonly logger = new Logger(StateService.name);
   private readonly stateEngine: StateDriverEngine;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private persistenceService: StatePersistenceService
+  ) {
     this.stateEngine = new StateDriverEngine();
     this.logger.log('StateService initialized');
   }
@@ -32,6 +36,13 @@ export class StateService {
     this.logger.debug(`Getting current state for pet: ${petId}`);
 
     try {
+      // 步骤157: 首先尝试从缓存获取
+      const cachedState = await this.persistenceService.getCachedState(petId);
+      if (cachedState) {
+        this.logger.debug(`Using cached state for pet: ${petId}`);
+        return cachedState;
+      }
+
       const pet = await this.prisma.pet.findUnique({
         where: { id: petId },
         select: { 
@@ -58,6 +69,7 @@ export class StateService {
           lastUpdate: new Date()
         };
         await this.updatePetStateInDatabase(petId, defaultState);
+        await this.persistenceService.updateStateCache(petId, defaultState as PetState);
         return defaultState as PetState;
       }
 
@@ -68,9 +80,12 @@ export class StateService {
       if (timeSinceLastUpdate > 300000) { // 5分钟
         const decayedState = this.stateEngine.calculateStateDecay(currentState, timeSinceLastUpdate);
         await this.updatePetStateInDatabase(petId, decayedState);
+        await this.persistenceService.updateStateCache(petId, decayedState);
         return decayedState;
       }
 
+      // 更新缓存
+      await this.persistenceService.updateStateCache(petId, currentState as PetState);
       return currentState as PetState;
     } catch (error) {
       this.logger.error(`Error getting current state for pet ${petId}:`, error);
@@ -100,8 +115,14 @@ export class StateService {
       // 保存到数据库
       await this.updatePetStateInDatabase(petId, boundedState);
       
-      // 记录状态历史
-      await this.recordStateHistory(petId, currentState, boundedState, stateUpdate.trigger, stateUpdate.reason);
+      // 步骤154: 使用持久化服务记录状态历史
+      await this.persistenceService.recordStateChange(
+        petId, 
+        currentState, 
+        boundedState, 
+        stateUpdate.trigger, 
+        stateUpdate.reason
+      );
       
       this.logger.debug(`State updated successfully for pet ${petId}`);
       return boundedState as PetState;
@@ -140,13 +161,18 @@ export class StateService {
       // 保存到数据库
       await this.updatePetStateInDatabase(petId, boundedState);
       
-      // 记录状态历史
-      await this.recordStateHistory(
+      // 步骤154: 使用持久化服务记录状态历史
+      await this.persistenceService.recordStateChange(
         petId, 
         currentState, 
         boundedState, 
         StateUpdateTrigger.INTERACTION,
-        `${interactionData.interactionType} interaction (intensity: ${interactionData.intensity})`
+        `${interactionData.interactionType} interaction (intensity: ${interactionData.intensity})`,
+        { 
+          interactionType: interactionData.interactionType,
+          intensity: interactionData.intensity,
+          duration: interactionData.duration 
+        }
       );
       
       this.logger.debug(`State interaction processed for pet ${petId}`);
@@ -167,31 +193,23 @@ export class StateService {
     this.logger.debug(`Getting state history for pet: ${petId}`);
 
     try {
-      // 这里我们使用PetEvolutionLog作为状态历史的存储
-      const historyRecords = await this.prisma.petEvolutionLog.findMany({
-        where: {
-          petId,
-          evolutionType: 'state'
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        take: limit
+      // 步骤155: 使用优化的状态历史查询
+      const optimizedHistory = await this.persistenceService.getOptimizedStateHistory(petId, {
+        limit,
+        includeAnalysis: true
       });
 
-      return historyRecords.map(record => ({
+      // 转换为DTO格式
+      return optimizedHistory.map(record => ({
         id: record.id,
-        petId: record.petId,
-        previousState: record.beforeSnapshot as Record<string, any>,
-        newState: record.afterSnapshot as Record<string, any>,
-        stateChanges: this.calculateStateChanges(
-          record.beforeSnapshot as any,
-          record.afterSnapshot as any
-        ),
-        trigger: this.mapTriggerFromDescription(record.changeDescription),
-        reason: record.changeDescription,
-        updatedAt: record.createdAt,
-        context: record.analysisData as Record<string, any>
+        petId: petId,
+        previousState: record.analysis?.beforeSnapshot || {},
+        newState: record.analysis?.afterSnapshot || {},
+        stateChanges: record.changes || {},
+        trigger: this.mapTriggerFromDescription(record.trigger || ''),
+        reason: record.description,
+        updatedAt: record.timestamp,
+        context: record.analysis || {}
       }));
     } catch (error) {
       this.logger.error(`Error getting state history for pet ${petId}:`, error);
@@ -222,8 +240,14 @@ export class StateService {
 
       this.logger.log(`Processing state decay for ${activePets.length} active pets`);
 
-      let processedCount = 0;
-      let errorCount = 0;
+      // 准备批量更新数据
+      const batchUpdates: Array<{
+        petId: string;
+        previousState: any;
+        newState: any;
+        trigger: StateUpdateTrigger;
+        reason?: string;
+      }> = [];
 
       for (const pet of activePets) {
         try {
@@ -236,26 +260,35 @@ export class StateService {
             const decayedState = this.stateEngine.calculateStateDecay(currentState, timeSinceLastUpdate);
             const boundedState = enforceStateBoundaries(decayedState);
             
+            // 更新数据库
             await this.updatePetStateInDatabase(pet.id, boundedState);
             
-            // 记录衰减历史
-            await this.recordStateHistory(
-              pet.id,
-              currentState,
-              boundedState,
-              StateUpdateTrigger.TIME_DECAY,
-              `Automatic state decay after ${Math.round(timeSinceLastUpdate / 60000)} minutes`
-            );
-            
-            processedCount++;
+            // 添加到批量更新列表
+            batchUpdates.push({
+              petId: pet.id,
+              previousState: currentState,
+              newState: boundedState,
+              trigger: StateUpdateTrigger.TIME_DECAY,
+              reason: `Automatic state decay after ${Math.round(timeSinceLastUpdate / 60000)} minutes`
+            });
           }
         } catch (error) {
           this.logger.error(`Error processing decay for pet ${pet.id}:`, error);
-          errorCount++;
         }
       }
 
-      this.logger.log(`State decay completed. Processed: ${processedCount}, Errors: ${errorCount}`);
+      // 执行批量状态历史记录
+      if (batchUpdates.length > 0) {
+        try {
+          await this.persistenceService.batchUpdateStates(batchUpdates);
+        } catch (error) {
+          this.logger.error('Error in batch state history recording:', error);
+        }
+      }
+
+      const processedCount = batchUpdates.length;
+
+      this.logger.log(`State decay completed. Processed: ${processedCount}`);
     } catch (error) {
       this.logger.error('Error in automatic state decay process:', error);
     }
@@ -273,38 +306,6 @@ export class StateService {
     });
   }
 
-  private async recordStateHistory(
-    petId: string,
-    previousState: any,
-    newState: any,
-    trigger: StateUpdateTrigger,
-    reason?: string
-  ): Promise<void> {
-    try {
-      const now = new Date();
-      await this.prisma.petEvolutionLog.create({
-        data: {
-          petId,
-          evolutionType: 'state',
-          changeDescription: reason || `State updated via ${trigger}`,
-          beforeSnapshot: previousState,
-          afterSnapshot: newState,
-          impactScore: this.calculateImpactScore(previousState, newState),
-          significance: this.calculateSignificance(previousState, newState),
-          analysisData: {
-            trigger,
-            timestamp: now.toISOString(),
-            changes: this.calculateStateChanges(previousState, newState)
-          },
-          yearMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-          dayOfWeek: now.getDay(),
-          hourOfDay: now.getHours()
-        }
-      });
-    } catch (error) {
-      this.logger.error('Error recording state history:', error);
-    }
-  }
 
   private applyStateChanges(currentState: PetState, update: StateUpdateDto): any {
     const newState = JSON.parse(JSON.stringify(currentState));
@@ -344,42 +345,6 @@ export class StateService {
       curiosity: intensity * 3,
       socialDesire: intensity * 4
     };
-  }
-
-  private calculateStateChanges(previousState: any, newState: any): Record<string, number> {
-    const changes: Record<string, number> = {};
-    
-    if (previousState.basic && newState.basic) {
-      for (const key of Object.keys(newState.basic)) {
-        if (typeof newState.basic[key] === 'number' && typeof previousState.basic[key] === 'number') {
-          changes[`basic.${key}`] = newState.basic[key] - previousState.basic[key];
-        }
-      }
-    }
-    
-    if (previousState.advanced && newState.advanced) {
-      for (const key of Object.keys(newState.advanced)) {
-        if (typeof newState.advanced[key] === 'number' && typeof previousState.advanced[key] === 'number') {
-          changes[`advanced.${key}`] = newState.advanced[key] - previousState.advanced[key];
-        }
-      }
-    }
-    
-    return changes;
-  }
-
-  private calculateImpactScore(previousState: any, newState: any): number {
-    const changes = this.calculateStateChanges(previousState, newState);
-    const totalChange = Object.values(changes).reduce((sum, change) => sum + Math.abs(change), 0);
-    return Math.min(totalChange / 100, 1.0); // 标准化到0-1范围
-  }
-
-  private calculateSignificance(previousState: any, newState: any): string {
-    const impactScore = this.calculateImpactScore(previousState, newState);
-    
-    if (impactScore > 0.3) return 'major';
-    if (impactScore > 0.1) return 'moderate';
-    return 'minor';
   }
 
   private mapTriggerFromDescription(description: string): StateUpdateTrigger {
