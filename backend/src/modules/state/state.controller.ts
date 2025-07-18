@@ -33,7 +33,7 @@ import { PetState } from '../../algorithms/state-driver';
 @ApiTags('状态管理')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('api/v1/pets/:petId/state')
+@Controller('pets/:petId/state')
 export class StateController {
   constructor(private readonly stateService: StateService) {}
 

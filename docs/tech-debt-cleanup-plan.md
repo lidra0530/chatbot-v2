@@ -299,6 +299,100 @@ gantt
 | 日期 | 版本 | 更新内容 | 更新人 |
 |------|------|---------|--------|
 | 2025-07-17 | v1.0 | 初始计划创建 | System |
+| 2025-07-18 | v1.1 | 添加阶段四审查发现的技术债务项目 | System |
+
+---
+
+## 📋 阶段四审查发现的技术债务
+
+> **基于阶段四状态驱动系统审查报告**  
+> **发现时间**: 2025-07-18  
+> **严重程度**: 轻微偏差  
+> **影响**: 配置灵活性和功能完整性
+
+### 任务组 D: 状态系统配置和映射完善 (0.5天)
+
+**优先级**: P2 (中等优先级)  
+**预估工作量**: 1-2小时  
+**影响范围**: 配置系统一致性和DTO功能完整性
+
+#### D1. 完善StateService中的DTO映射逻辑
+
+**问题位置**: `/home/libra/project/chatbot/backend/src/modules/state/state.service.ts:310-322`  
+**方法**: `applyStateChanges`  
+**问题描述**: 当前只实现了 `hungerChange` 字段的映射，需要完整实现所有DTO字段到新状态结构的映射
+
+**修复步骤**:
+- [ ] 分析 `StateUpdateDto` 中的所有可选字段映射关系
+- [ ] 实现完整的字段映射逻辑：
+  - `hungerChange` → `newState.basic.hunger`
+  - `fatigueChange` → `newState.basic.energy` (反向映射)
+  - `happinessChange` → `newState.basic.mood`
+  - `healthChange` → `newState.basic.health`
+  - `socialChange` → `newState.advanced.socialDesire`
+  - `learningChange` → `newState.advanced.curiosity`
+  - `creativityChange` → `newState.advanced.creativity`
+  - `explorationChange` → `newState.advanced.focusLevel`
+- [ ] 添加边界检查和验证 `Math.max(0, Math.min(100, value))`
+- [ ] 更新方法注释和使用示例
+
+**预估工作量**: 30分钟
+
+#### D2. 重构状态衰减配置集成
+
+**问题位置**: `/home/libra/project/chatbot/backend/src/algorithms/state-driver.ts:114-147`  
+**方法**: `calculateStateDecay`  
+**问题描述**: 当前使用硬编码的衰减率值 (`advancedDecayRate = 0.05`)，需要从配置文件读取
+
+**修复步骤**:
+- [ ] 修改构造函数导入 `STATE_DECAY_CONFIG` 配置
+- [ ] 重构衰减率获取逻辑，从配置读取：
+  - `curiosity`: 0.05 → `STATE_DECAY_CONFIG.advancedDecayRates.curiosity`
+  - `socialDesire`: 0.03 → `STATE_DECAY_CONFIG.advancedDecayRates.socialDesire`
+  - `creativity`: 0.04 → `STATE_DECAY_CONFIG.advancedDecayRates.creativity`
+  - `focusLevel`: 0.08 → `STATE_DECAY_CONFIG.advancedDecayRates.focusLevel`
+- [ ] 集成 `STATE_DECAY_CONFIG.decayLimits.minimumValues` 边界检查
+- [ ] 添加配置有效性检查和默认值处理
+- [ ] 添加配置变更的日志记录
+
+**代码变更示例**:
+```typescript
+// 从硬编码:
+const advancedDecayRate = 0.05;
+newState.advanced.curiosity = Math.max(0, currentState.advanced.curiosity - (advancedDecayRate * hoursElapsed));
+
+// 改为配置驱动:
+const { advancedDecayRates } = STATE_DECAY_CONFIG;
+const { minimumValues } = STATE_DECAY_CONFIG.decayLimits;
+newState.advanced.curiosity = Math.max(
+  minimumValues.curiosity, 
+  currentState.advanced.curiosity - (advancedDecayRates.curiosity * hoursElapsed)
+);
+```
+
+**预估工作量**: 45分钟
+
+### 验收标准
+
+**D1 验收标准**:
+- ✅ 所有 `StateUpdateDto` 字段正确映射到新状态结构
+- ✅ 边界检查确保所有值在 0-100 范围内
+- ✅ 添加适当的调试日志和方法注释
+- ✅ 通过单元测试验证映射逻辑正确性
+
+**D2 验收标准**:
+- ✅ 移除所有硬编码衰减率值
+- ✅ 配置系统正确读取和应用衰减率
+- ✅ 边界检查使用配置的最小值
+- ✅ 添加配置验证和错误处理
+- ✅ 通过集成测试验证配置驱动的衰减逻辑
+
+### 实施建议
+
+**执行顺序**: D2 (配置集成) → D1 (DTO映射)  
+**风险等级**: 低  
+**向后兼容**: 保证现有功能不受影响  
+**测试要求**: 单元测试 + 集成测试验证
 
 ---
 
