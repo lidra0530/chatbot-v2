@@ -4,7 +4,6 @@ import { SkillSystemEngine, PetSkillProgress, SkillStatus } from '../../algorith
 import { SKILL_DEFINITIONS_MAP, SKILL_SYSTEM_CONFIG } from '../../config/skill-mappings.config';
 import {
   SkillDto,
-  SkillProgressDto,
   SkillExperienceGainDto,
   SkillExperienceResultDto,
   SkillUnlockRequestDto,
@@ -14,8 +13,10 @@ import {
   SkillStatisticsDto,
   SkillFilterDto,
   BulkSkillExperienceDto,
-  BatchUnlockDto,
-  BatchUnlockResultDto
+  CurrentAbilitiesDto,
+  SkillAbilityDto,
+  AutoExperienceConfigDto,
+  ExperienceGrowthResultDto
 } from './dto';
 
 /**
@@ -357,9 +358,250 @@ export class SkillsService {
     return statistics;
   }
 
+  /**
+   * 步骤177: 获取当前能力
+   */
+  async getCurrentAbilities(petId: string): Promise<CurrentAbilitiesDto> {
+    this.logger.debug(`Getting current abilities for pet: ${petId}`);
+
+    const pet = await this.prisma.pet.findUnique({
+      where: { id: petId },
+      include: { user: true }
+    });
+
+    if (!pet) {
+      throw new NotFoundException(`Pet with ID ${petId} not found`);
+    }
+
+    const petSkillsMap = await this.getPetSkillsMap(petId);
+    const activeAbilities: SkillAbilityDto[] = [];
+    const passiveAbilities: SkillAbilityDto[] = [];
+    const specialAbilities: SkillAbilityDto[] = [];
+
+    let totalPowerScore = 0;
+    const abilitiesByType: Record<string, number> = {};
+
+    // 遍历已解锁的技能，提取能力
+    for (const [skillId, progress] of petSkillsMap) {
+      if (progress.status !== SkillStatus.UNLOCKED && progress.status !== SkillStatus.MASTERED) {
+        continue;
+      }
+
+      const skillDef = SKILL_DEFINITIONS_MAP.get(skillId);
+      if (!skillDef) continue;
+
+      // 从技能效果中提取能力
+      for (const effect of skillDef.effects) {
+        const ability: SkillAbilityDto = {
+          id: `${skillId}_${effect.type}`,
+          name: `${skillDef.name} - ${effect.type}`,
+          description: `${skillDef.description} (${effect.target})`,
+          level: progress.level,
+          sourceSkillId: skillId,
+          effectValue: effect.modifier * progress.level, // 等级影响效果值
+          isActive: effect.type === 'active',
+          cooldownSeconds: effect.duration,
+          usageLimit: undefined,
+          usedCount: 0 // TODO: 从数据库获取实际使用次数
+        };
+
+        // 计算能力评分
+        const powerScore = this.calculateAbilityPowerScore(ability, skillDef.rarity);
+        totalPowerScore += powerScore;
+
+        // 按类型统计
+        if (!abilitiesByType[skillDef.type]) {
+          abilitiesByType[skillDef.type] = 0;
+        }
+        abilitiesByType[skillDef.type] += powerScore;
+
+        // 分类能力
+        switch (effect.type) {
+          case 'active':
+            activeAbilities.push(ability);
+            break;
+          case 'passive':
+            passiveAbilities.push(ability);
+            break;
+          case 'special':
+            specialAbilities.push(ability);
+            break;
+          default:
+            passiveAbilities.push(ability);
+        }
+      }
+    }
+
+    return {
+      petId,
+      activeAbilities,
+      passiveAbilities,
+      specialAbilities,
+      totalPowerScore,
+      abilitiesByType
+    };
+  }
+
+  /**
+   * 步骤178: 实现技能经验自动增长机制
+   */
+  async processAutoExperienceGrowth(petId: string, config: AutoExperienceConfigDto): Promise<ExperienceGrowthResultDto> {
+    this.logger.debug(`Processing auto experience growth for pet: ${petId}`);
+
+    if (!config.enabled) {
+      return {
+        petId,
+        experienceGained: 0,
+        affectedSkills: [],
+        leveledUpSkills: [],
+        newlyUnlockedSkills: [],
+        startTime: new Date(),
+        endTime: new Date()
+      };
+    }
+
+    const startTime = new Date();
+    const pet = await this.prisma.pet.findUnique({
+      where: { id: petId },
+      include: { user: true }
+    });
+
+    if (!pet) {
+      throw new NotFoundException(`Pet with ID ${petId} not found`);
+    }
+
+    // 计算闲置时间
+    const lastActiveTime = pet.updatedAt || pet.createdAt;
+    const idleHours = Math.min(
+      (Date.now() - lastActiveTime.getTime()) / (1000 * 60 * 60),
+      config.maxIdleHours
+    );
+
+    if (idleHours < 1) {
+      // 闲置时间不足1小时，不增长经验
+      return {
+        petId,
+        experienceGained: 0,
+        affectedSkills: [],
+        leveledUpSkills: [],
+        newlyUnlockedSkills: [],
+        startTime,
+        endTime: new Date()
+      };
+    }
+
+    const petSkillsMap = await this.getPetSkillsMap(petId);
+    const affectedSkills: string[] = [];
+    const leveledUpSkills: string[] = [];
+    const newlyUnlockedSkills: string[] = [];
+
+    // 计算基础经验增长
+    const baseExperience = Math.floor(config.baseGrowthRate * idleHours * config.activityMultiplier);
+    let totalExperienceGained = 0;
+
+    // 确定受影响的技能
+    const targetSkills = config.targetSkills && config.targetSkills.length > 0 
+      ? config.targetSkills 
+      : Array.from(petSkillsMap.keys()).filter(skillId => {
+          const progress = petSkillsMap.get(skillId);
+          return progress && (progress.status === SkillStatus.UNLOCKED || progress.status === SkillStatus.MASTERED);
+        });
+
+    // 为已解锁的技能分配经验
+    for (const skillId of targetSkills) {
+      const progress = petSkillsMap.get(skillId);
+      if (!progress || progress.status === SkillStatus.LOCKED) {
+        continue;
+      }
+
+      const skillDef = SKILL_DEFINITIONS_MAP.get(skillId);
+      if (!skillDef) continue;
+
+      // 根据技能稀有度和当前等级调整经验分配
+      const rarityMultiplier = this.getRarityExperienceMultiplier(skillDef.rarity);
+      const levelPenalty = Math.max(0.1, 1 - (progress.level * 0.1)); // 等级越高，自动增长越慢
+      
+      const skillExperience = Math.floor(baseExperience * rarityMultiplier * levelPenalty);
+      
+      if (skillExperience > 0) {
+        const originalLevel = progress.level;
+        
+        // 处理经验增长
+        const result = await this.skillEngine.processSkillExperienceGain(progress, skillExperience);
+        
+        totalExperienceGained += skillExperience;
+        affectedSkills.push(skillId);
+        
+        if (result.leveledUp) {
+          leveledUpSkills.push(skillId);
+          this.logger.log(`Skill ${skillId} leveled up from ${originalLevel} to ${progress.level} via auto-growth`);
+        }
+        
+        // 保存进度
+        await this.saveSkillProgress(petId, progress);
+      }
+    }
+
+    // 检查是否有新技能可以解锁
+    const petData = await this.buildPetDataForEngine(pet);
+    for (const [skillId] of SKILL_DEFINITIONS_MAP) {
+      const currentProgress = petSkillsMap.get(skillId);
+      if (currentProgress && currentProgress.status !== SkillStatus.LOCKED) {
+        continue; // 已经解锁的技能跳过
+      }
+
+      const evaluation = await this.skillEngine.evaluateUnlockConditions(skillId, petData);
+      if (evaluation.canUnlock) {
+        // 尝试自动解锁
+        try {
+          const unlockResult = await this.skillEngine.unlockSkill(skillId, petData);
+          if (unlockResult.success) {
+            newlyUnlockedSkills.push(skillId);
+            await this.saveSkillProgress(petId, petData.skills.get(skillId)!);
+            this.logger.log(`Skill ${skillId} auto-unlocked for pet ${petId}`);
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to auto-unlock skill ${skillId}:`, error);
+        }
+      }
+    }
+
+    // 更新宠物最后活跃时间
+    await this.prisma.pet.update({
+      where: { id: petId },
+      data: { updatedAt: new Date() }
+    });
+
+    const endTime = new Date();
+    this.logger.log(`Auto experience growth completed for pet ${petId}: ${totalExperienceGained} exp, ${leveledUpSkills.length} levelups, ${newlyUnlockedSkills.length} new unlocks`);
+
+    return {
+      petId,
+      experienceGained: totalExperienceGained,
+      affectedSkills,
+      leveledUpSkills,
+      newlyUnlockedSkills,
+      startTime,
+      endTime
+    };
+  }
+
+  /**
+   * 获取默认的自动经验增长配置
+   */
+  getDefaultAutoExperienceConfig(): AutoExperienceConfigDto {
+    return {
+      enabled: true,
+      baseGrowthRate: 5, // 每小时5点经验
+      activityMultiplier: 1.0,
+      maxIdleHours: 24, // 最多累积24小时
+      targetSkills: [] // 空数组表示所有已解锁技能
+    };
+  }
+
   // 私有辅助方法
 
-  private async getPetSkillsMap(petId: string): Promise<Map<string, PetSkillProgress>> {
+  private async getPetSkillsMap(_petId: string): Promise<Map<string, PetSkillProgress>> {
     // 这里应该从数据库获取技能进度，暂时返回空Map
     // TODO: 实现数据库集成
     return new Map();
@@ -415,5 +657,46 @@ export class SkillsService {
     }
     
     return '需要满足更多条件';
+  }
+
+  /**
+   * 计算能力强度评分
+   */
+  private calculateAbilityPowerScore(ability: SkillAbilityDto, rarity: string): number {
+    let baseScore = ability.effectValue * ability.level;
+    
+    // 稀有度加成
+    const rarityMultipliers = {
+      'common': 1.0,
+      'uncommon': 1.5,
+      'rare': 2.0,
+      'epic': 3.0,
+      'legendary': 5.0
+    };
+    
+    const multiplier = rarityMultipliers[rarity as keyof typeof rarityMultipliers] || 1.0;
+    baseScore *= multiplier;
+    
+    // 主动技能有额外加成
+    if (ability.isActive) {
+      baseScore *= 1.2;
+    }
+    
+    return Math.floor(baseScore);
+  }
+
+  /**
+   * 获取稀有度经验倍数
+   */
+  private getRarityExperienceMultiplier(rarity: string): number {
+    const multipliers = {
+      'common': 1.0,
+      'uncommon': 0.8,
+      'rare': 0.6,
+      'epic': 0.4,
+      'legendary': 0.2
+    };
+    
+    return multipliers[rarity as keyof typeof multipliers] || 1.0;
   }
 }

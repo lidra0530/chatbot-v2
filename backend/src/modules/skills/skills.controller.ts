@@ -32,7 +32,10 @@ import {
   AvailableSkillsDto,
   SkillStatisticsDto,
   SkillFilterDto,
-  BulkSkillExperienceDto
+  BulkSkillExperienceDto,
+  CurrentAbilitiesDto,
+  AutoExperienceConfigDto,
+  ExperienceGrowthResultDto
 } from './dto';
 
 /**
@@ -75,6 +78,14 @@ export class SkillsController {
   @ApiResponse({ status: 200, description: '成功获取技能统计', type: SkillStatisticsDto })
   async getSkillStatistics(@Param('petId') petId: string): Promise<SkillStatisticsDto> {
     return this.skillsService.getSkillStatistics(petId);
+  }
+
+  @Get('abilities')
+  @ApiOperation({ summary: '获取当前能力', description: '获取宠物当前拥有的所有能力' })
+  @ApiParam({ name: 'petId', description: '宠物ID' })
+  @ApiResponse({ status: 200, description: '成功获取当前能力', type: CurrentAbilitiesDto })
+  async getCurrentAbilities(@Param('petId') petId: string): Promise<CurrentAbilitiesDto> {
+    return this.skillsService.getCurrentAbilities(petId);
   }
 
   @Get(':skillId/evaluation')
@@ -129,6 +140,26 @@ export class SkillsController {
     // 确保petId匹配
     request.petId = petId;
     return this.skillsService.bulkGainExperience(request);
+  }
+
+  @Post('auto-growth')
+  @ApiOperation({ summary: '处理自动经验增长', description: '为宠物技能处理自动经验增长' })
+  @ApiParam({ name: 'petId', description: '宠物ID' })
+  @ApiBody({ type: AutoExperienceConfigDto })
+  @ApiResponse({ status: 200, description: '自动经验增长结果', type: ExperienceGrowthResultDto })
+  @HttpCode(HttpStatus.OK)
+  async processAutoExperienceGrowth(
+    @Param('petId') petId: string,
+    @Body(ValidationPipe) config: AutoExperienceConfigDto
+  ): Promise<ExperienceGrowthResultDto> {
+    return this.skillsService.processAutoExperienceGrowth(petId, config);
+  }
+
+  @Get('auto-growth/config')
+  @ApiOperation({ summary: '获取默认自动经验配置', description: '获取系统默认的自动经验增长配置' })
+  @ApiResponse({ status: 200, description: '成功获取默认配置', type: AutoExperienceConfigDto })
+  async getDefaultAutoExperienceConfig(): Promise<AutoExperienceConfigDto> {
+    return this.skillsService.getDefaultAutoExperienceConfig();
   }
 
   // 管理员专用端点
