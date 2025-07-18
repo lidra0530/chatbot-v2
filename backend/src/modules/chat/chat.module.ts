@@ -5,6 +5,7 @@ import { ChatService } from './chat.service';
 import { PrismaService } from '../../common/prisma.service';
 import { ConversationsModule } from '../conversations/conversations.module';
 import { PersonalityModule } from '../personality/personality.module';
+import { SkillsModule } from '../skills/skills.module';
 import { LLMModule } from '../../services/llm.module';
 import { ChatPerformanceMonitor } from '../../common/monitoring/chat-performance.monitor';
 import { ChatCacheService } from '../../common/cache/chat-cache.service';
@@ -14,6 +15,7 @@ import { CostControlService } from '../../common/cost-control/cost-control.servi
   imports: [
     ConversationsModule,
     PersonalityModule,
+    SkillsModule,
     LLMModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,

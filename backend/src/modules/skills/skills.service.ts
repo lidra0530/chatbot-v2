@@ -700,4 +700,151 @@ export class SkillsService {
     
     return multipliers[rarity as keyof typeof multipliers] || 1.0;
   }
+
+  /**
+   * 聊天互动集成方法：从聊天互动中增加技能经验
+   */
+  async addExperienceFromInteraction(
+    petId: string,
+    userMessage: string,
+    botResponse: string,
+    conversationMetadata?: Record<string, any>
+  ): Promise<{ experienceGained: number; affectedSkills: string[] }> {
+    try {
+      // 分析对话内容，确定互动类型和强度
+      const interactionAnalysis = this.analyzeConversationContent(userMessage, botResponse, conversationMetadata);
+      
+      if (!interactionAnalysis || interactionAnalysis.skillExperience.length === 0) {
+        this.logger.debug(`No skill experience to add for pet ${petId} from conversation`);
+        return { experienceGained: 0, affectedSkills: [] };
+      }
+
+      const affectedSkills: string[] = [];
+      let totalExperienceGained = 0;
+
+      // 为每个相关技能增加经验
+      for (const skillExp of interactionAnalysis.skillExperience) {
+        try {
+          const result = await this.gainSkillExperience(petId, skillExp.skillId, {
+            interactionType: interactionAnalysis.type,
+            intensity: skillExp.intensity,
+            duration: interactionAnalysis.duration,
+            contextFactors: interactionAnalysis.contextFactors
+          });
+          
+          if (result.experienceGained > 0) {
+            affectedSkills.push(skillExp.skillId);
+            totalExperienceGained += result.experienceGained;
+            
+            this.logger.debug(`Added ${result.experienceGained} experience to skill ${skillExp.skillId} for pet ${petId}`);
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to add experience to skill ${skillExp.skillId} for pet ${petId}:`, error);
+        }
+      }
+
+      this.logger.log(`Chat interaction experience added for pet ${petId}: ${totalExperienceGained} total experience across ${affectedSkills.length} skills`);
+      
+      return { experienceGained: totalExperienceGained, affectedSkills };
+    } catch (error) {
+      this.logger.error(`Error adding experience from interaction for pet ${petId}:`, error);
+      return { experienceGained: 0, affectedSkills: [] };
+    }
+  }
+
+  /**
+   * 分析对话内容，确定互动类型和技能经验分配
+   */
+  private analyzeConversationContent(
+    userMessage: string,
+    botResponse: string,
+    metadata?: Record<string, any>
+  ): {
+    type: string;
+    duration: number;
+    intensity: number;
+    contextFactors: Record<string, any>;
+    skillExperience: { skillId: string; intensity: number }[];
+  } | null {
+    const analysis = {
+      type: 'conversation',
+      duration: Math.max(5, Math.min(30, userMessage.length / 10)), // 基于消息长度估算持续时间
+      intensity: 5, // 默认强度
+      contextFactors: metadata || {},
+      skillExperience: [] as { skillId: string; intensity: number }[]
+    };
+
+    // 学习类关键词匹配
+    const learningKeywords = ['学习', '知识', '教', '解释', '原理', '如何', '什么是', '为什么', '怎么', '学会', '理解', '明白'];
+    const creativityKeywords = ['创意', '创造', '想象', '设计', '艺术', '画', '写', '创作', '灵感', '故事'];
+    const emotionalKeywords = ['感情', '情绪', '心情', '开心', '难过', '生气', '焦虑', '抑郁', '安慰', '支持'];
+    const socialKeywords = ['朋友', '社交', '聊天', '交流', '分享', '讨论', '话题', '一起', '陪伴'];
+    const problemSolvingKeywords = ['问题', '解决', '方法', '办法', '建议', '帮助', '困难', '挑战', '分析'];
+
+    const userText = userMessage.toLowerCase();
+    const botText = botResponse.toLowerCase();
+    const combinedText = userText + ' ' + botText;
+
+    // 检查学习相关内容
+    if (this.containsKeywords(combinedText, learningKeywords)) {
+      analysis.skillExperience.push({ skillId: 'curiosity_drive', intensity: 6 });
+      analysis.skillExperience.push({ skillId: 'basic_communication', intensity: 4 });
+      analysis.type = 'learning';
+      analysis.intensity = 7;
+    }
+
+    // 检查创意相关内容
+    if (this.containsKeywords(combinedText, creativityKeywords)) {
+      analysis.skillExperience.push({ skillId: 'imagination_spark', intensity: 6 });
+      analysis.skillExperience.push({ skillId: 'basic_communication', intensity: 3 });
+      analysis.type = 'creative';
+      analysis.intensity = 6;
+    }
+
+    // 检查情感相关内容
+    if (this.containsKeywords(combinedText, emotionalKeywords)) {
+      analysis.skillExperience.push({ skillId: 'emotional_awareness', intensity: 6 });
+      analysis.skillExperience.push({ skillId: 'basic_communication', intensity: 4 });
+      analysis.type = 'emotional';
+      analysis.intensity = 6;
+    }
+
+    // 检查社交相关内容
+    if (this.containsKeywords(combinedText, socialKeywords)) {
+      analysis.skillExperience.push({ skillId: 'friendship_bond', intensity: 5 });
+      analysis.skillExperience.push({ skillId: 'basic_communication', intensity: 5 });
+      analysis.type = 'social';
+      analysis.intensity = 5;
+    }
+
+    // 检查问题解决相关内容
+    if (this.containsKeywords(combinedText, problemSolvingKeywords)) {
+      analysis.skillExperience.push({ skillId: 'logical_thinking', intensity: 6 });
+      analysis.skillExperience.push({ skillId: 'basic_communication', intensity: 4 });
+      analysis.type = 'problem_solving';
+      analysis.intensity = 6;
+    }
+
+    // 如果没有匹配到特定类型，给基础交流技能增加经验
+    if (analysis.skillExperience.length === 0) {
+      analysis.skillExperience.push({ skillId: 'basic_communication', intensity: 4 });
+    }
+
+    // 根据对话长度和复杂度调整强度
+    if (userMessage.length > 100 || botResponse.length > 200) {
+      analysis.intensity = Math.min(10, analysis.intensity + 2);
+      analysis.skillExperience.forEach(exp => {
+        exp.intensity = Math.min(10, exp.intensity + 1);
+      });
+    }
+
+    return analysis;
+  }
+
+  /**
+   * 检查文本是否包含关键词
+   */
+  private containsKeywords(text: string, keywords: string[]): boolean {
+    return keywords.some(keyword => text.includes(keyword));
+  }
 }

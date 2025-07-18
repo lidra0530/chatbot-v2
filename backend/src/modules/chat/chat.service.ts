@@ -6,6 +6,7 @@ import { QwenLLMService } from '../../services/qwen-llm.service';
 import { ChatPerformanceMonitor } from '../../common/monitoring/chat-performance.monitor';
 import { ChatCacheService } from '../../common/cache/chat-cache.service';
 import { CostControlService } from '../../common/cost-control/cost-control.service';
+import { SkillsService } from '../skills/skills.service';
 import { ChatCompletionDto } from './dto/chat-completion.dto';
 import { ChatResponseDto } from './dto/chat-response.dto';
 import { ChatRequest, ChatMessage } from '../../common/interfaces/llm.interface';
@@ -22,8 +23,9 @@ export class ChatService {
     private readonly performanceMonitor: ChatPerformanceMonitor,
     private readonly cacheService: ChatCacheService,
     private readonly costControlService: CostControlService,
+    private readonly skillsService: SkillsService,
   ) {
-    this.logger.log('ChatService initialized with LLM integration, performance monitoring, caching and cost control');
+    this.logger.log('ChatService initialized with LLM integration, performance monitoring, caching, cost control and skills integration');
   }
 
   async processChat(userId: string, dto: ChatCompletionDto): Promise<ChatResponseDto> {
@@ -103,15 +105,21 @@ export class ChatService {
       // 13. 使对话上下文缓存失效（因为添加了新消息）
       this.cacheService.invalidateConversationCache(conversation.id);
       
-      // 14. 构建并返回响应
+      // 14. 触发技能经验增长（异步执行，不影响响应时间）
+      this.processSkillExperienceFromChat(petId, message, llmResponse.content, dto.metadata)
+        .catch(error => {
+          this.logger.warn('Failed to process skill experience from chat:', error);
+        });
+      
+      // 15. 构建并返回响应
       const response = this.buildChatResponse(aiMessage, llmResponse, conversation.id);
       
-      // 15. 记录成本控制使用情况
+      // 16. 记录成本控制使用情况
       if (llmResponse.usage) {
         this.costControlService.recordUsage(userId, llmResponse.usage);
       }
       
-      // 16. 记录性能指标
+      // 17. 记录性能指标
       const totalResponseTime = Date.now() - requestStartTime;
       this.performanceMonitor.recordChatRequest(
         totalResponseTime,
@@ -516,5 +524,37 @@ export class ChatService {
     );
     
     return [...new Set(keywords)].slice(0, 10); // 去重并限制数量
+  }
+
+  /**
+   * 处理聊天中的技能经验增长（异步执行）
+   */
+  private async processSkillExperienceFromChat(
+    petId: string,
+    userMessage: string,
+    botResponse: string,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    try {
+      this.logger.debug(`Processing skill experience from chat for pet ${petId}`);
+      
+      const result = await this.skillsService.addExperienceFromInteraction(
+        petId,
+        userMessage,
+        botResponse,
+        metadata
+      );
+      
+      if (result.experienceGained > 0) {
+        this.logger.log(
+          `Skills experience added for pet ${petId}: ${result.experienceGained} exp across ${result.affectedSkills.length} skills [${result.affectedSkills.join(', ')}]`
+        );
+      } else {
+        this.logger.debug(`No skill experience gained for pet ${petId} from this conversation`);
+      }
+    } catch (error) {
+      this.logger.error(`Error processing skill experience for pet ${petId}:`, error);
+      // 不重新抛出错误，避免影响聊天功能
+    }
   }
 }
