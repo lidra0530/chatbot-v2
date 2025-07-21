@@ -92,7 +92,7 @@ export class ChatController {
     try {
       this.logger.log(`Chat completion request from user ${userId} for pet ${chatCompletionDto.petId}`);
       
-      const result = await this.chatService.processChat(userId, chatCompletionDto);
+      const result = await this.chatService.processEnhancedChat(userId, chatCompletionDto);
       
       const processingTime = Date.now() - startTime;
       this.logger.log(`Chat completion successful: ${processingTime}ms, message length: ${result.message.length}`);

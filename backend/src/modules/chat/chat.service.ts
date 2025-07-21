@@ -7,6 +7,10 @@ import { ChatPerformanceMonitor } from '../../common/monitoring/chat-performance
 import { ChatCacheService } from '../../common/cache/chat-cache.service';
 import { CostControlService } from '../../common/cost-control/cost-control.service';
 import { SkillsService } from '../skills/skills.service';
+import { StateService } from '../state/state.service';
+import { PromptGeneratorEngine } from '../../algorithms/prompt-generator';
+import { PersonalityTrait } from '../../algorithms/types/personality.types';
+import { PetStateDto, PetMood, PetActivity } from '../state/dto/pet-state.dto';
 import { ChatCompletionDto } from './dto/chat-completion.dto';
 import { ChatResponseDto } from './dto/chat-response.dto';
 import { ChatRequest, ChatMessage } from '../../common/interfaces/llm.interface';
@@ -24,11 +28,13 @@ export class ChatService {
     private readonly cacheService: ChatCacheService,
     private readonly costControlService: CostControlService,
     private readonly skillsService: SkillsService,
+    private readonly stateService: StateService,
+    private readonly promptGenerator: PromptGeneratorEngine,
   ) {
-    this.logger.log('ChatService initialized with LLM integration, performance monitoring, caching, cost control and skills integration');
+    this.logger.log('ChatService initialized with LLM integration, performance monitoring, caching, cost control, skills integration and prompt generation engine');
   }
 
-  async processChat(userId: string, dto: ChatCompletionDto): Promise<ChatResponseDto> {
+  async processEnhancedChat(userId: string, dto: ChatCompletionDto): Promise<ChatResponseDto> {
     const { petId, conversationId, message } = dto;
     const requestStartTime = Date.now();
     
@@ -37,7 +43,7 @@ export class ChatService {
       this.costControlService.validateRequest(userId);
       
       // 2. 验证用户权限和宠物所有权
-      const pet = await this.validateUserPetAccess(userId, petId);
+      await this.validateUserPetAccess(userId, petId);
       
       // 2. 检查相似问题缓存
       const cachedAnswer = this.cacheService.getSimilarQuestionAnswer(message, petId);
@@ -54,20 +60,41 @@ export class ChatService {
           timestamp: new Date(),
           metadata: {
             cached: true,
-            originalTimestamp: cachedAnswer.timestamp,
-            responseTime: totalResponseTime,
+            processingTime: totalResponseTime,
+            personalityInfluence: {
+              dominantTrait: 'cached',
+              traitValues: {}
+            },
+            stateInfluence: {
+              currentMood: 'cached',
+              energyLevel: 0,
+              healthStatus: 'cached'
+            },
+            skillsAffected: [],
+            modelUsed: 'cached',
+            qualityScore: 0.5
           },
         };
       }
       
-      // 3. 获取宠物个性和状态
+      // 3. 获取宠物个性、状态和技能数据
       const personality = await this.personalityService.getPersonalityDetails(petId);
-      const currentState = await this.getPetState(petId);
+      const currentState = await this.stateService.getCurrentState(petId);
+      const skills = await this.skillsService.getSkillTree(petId);
       
-      // 4. 构建个性化系统提示词（使用缓存）
+      // 4. 使用PromptGeneratorEngine构建个性化系统提示词（使用缓存）
       let systemPrompt = this.cacheService.getPersonalityPrompt(petId, personality);
       if (!systemPrompt) {
-        systemPrompt = this.buildPersonalizedPrompt(pet, personality, currentState);
+        // Convert PersonalityTraits to Record<PersonalityTrait, number>
+        const convertedPersonality = this.convertPersonalityTraits(personality);
+        // Convert PetState to PetStateDto
+        const convertedState = this.convertPetStateToDto(petId, currentState);
+        const generatedPrompt = await this.promptGenerator.generateCompletePrompt(
+          convertedPersonality,
+          convertedState,
+          skills
+        );
+        systemPrompt = generatedPrompt.combinedPrompt;
         this.cacheService.cachePersonalityPrompt(petId, personality, systemPrompt);
       }
       
@@ -111,8 +138,12 @@ export class ChatService {
           this.logger.warn('Failed to process skill experience from chat:', error);
         });
       
-      // 15. 构建并返回响应
-      const response = this.buildChatResponse(aiMessage, llmResponse, conversation.id);
+      // 15. 分析对话内容并更新宠物数据
+      const analysisResult = await this.analyzeChatResponse(petId, message, llmResponse.content, personality, currentState);
+      await this.updatePetFromChat(petId, analysisResult, skills);
+
+      // 16. 构建并返回响应
+      const response = this.buildChatResponse(aiMessage, llmResponse, conversation.id, analysisResult);
       
       // 16. 记录成本控制使用情况
       if (llmResponse.usage) {
@@ -234,48 +265,6 @@ export class ChatService {
     return pet;
   }
 
-  /**
-   * 获取宠物状态
-   */
-  private async getPetState(petId: string): Promise<any> {
-    const pet = await this.prisma.pet.findUnique({
-      where: { id: petId },
-      select: { currentState: true }
-    });
-
-    return pet?.currentState || {
-      basic: { mood: 70, energy: 80, hunger: 60, health: 90 },
-      advanced: { curiosity: 65, socialDesire: 55, creativity: 60, focusLevel: 70 }
-    };
-  }
-
-  /**
-   * 构建个性化系统提示词
-   */
-  private buildPersonalizedPrompt(pet: any, personality: any, state: any): string {
-    const traits = personality.traits || {};
-    const basicState = state.basic || {};
-    
-    return `你是${pet.name}，一个独特的AI虚拟宠物助手。
-
-## 你的个性特质 (影响你的回复风格)
-- 开放性: ${traits.openness || 50}/100 ${this.getTraitDescription('openness', traits.openness || 50)}
-- 尽责性: ${traits.conscientiousness || 50}/100 ${this.getTraitDescription('conscientiousness', traits.conscientiousness || 50)}
-- 外向性: ${traits.extraversion || 50}/100 ${this.getTraitDescription('extraversion', traits.extraversion || 50)}
-- 亲和性: ${traits.agreeableness || 50}/100 ${this.getTraitDescription('agreeableness', traits.agreeableness || 50)}
-- 神经质: ${traits.neuroticism || 30}/100 ${this.getTraitDescription('neuroticism', traits.neuroticism || 30)}
-
-## 你的当前状态 (影响你的情绪和反应)
-- 心情: ${basicState.mood || 70}/100
-- 精力: ${basicState.energy || 80}/100
-- 饥饿度: ${basicState.hunger || 60}/100
-- 健康状况: ${basicState.health || 90}/100
-
-## 行为指南
-请根据你的个性特质和当前状态来回应用户。高开放性时更愿意探讨新想法，高外向性时更活泼健谈，
-低精力时回复可能更简短，心情好时更积极乐观。保持自然、友好，像真正的宠物伙伴一样。
-请用中文回复，语气要符合你的个性特质。`;
-  }
 
   /**
    * 获取或创建对话
@@ -407,57 +396,25 @@ export class ChatService {
   /**
    * 构建聊天响应
    */
-  private buildChatResponse(aiMessage: any, llmResponse: any, conversationId: string): ChatResponseDto {
+  private buildChatResponse(aiMessage: any, llmResponse: any, conversationId: string, analysisResult?: any): ChatResponseDto {
     return {
       id: aiMessage.id,
       conversationId,
       message: aiMessage.content,
       timestamp: aiMessage.createdAt,
       metadata: {
-        model: llmResponse.model,
+        modelUsed: llmResponse.model,
         usage: llmResponse.usage,
-        responseTime: llmResponse.responseTime,
-        personalityInfluence: aiMessage.personalitySnapshot,
-        stateInfluence: aiMessage.stateSnapshot,
+        processingTime: llmResponse.responseTime,
+        personalityInfluence: analysisResult?.personalityInfluences || aiMessage.personalitySnapshot,
+        stateInfluence: analysisResult?.stateInfluences || aiMessage.stateSnapshot,
+        skillsAffected: analysisResult?.skillExperiences?.map((exp: any) => exp.skillId) || [],
+        cached: false,
+        qualityScore: analysisResult?.qualityMetrics?.overall || 0.8
       },
     };
   }
 
-  /**
-   * 获取特质描述
-   */
-  private getTraitDescription(trait: string, value: number): string {
-    const descriptions: Record<string, Record<string, string>> = {
-      openness: {
-        high: "好奇心强，喜欢探索新想法和创意话题",
-        medium: "对新事物保持适度的开放态度", 
-        low: "偏好熟悉的话题，较为保守"
-      },
-      conscientiousness: {
-        high: "做事认真细致，有条理性",
-        medium: "在规划和执行上表现适中",
-        low: "比较随性，不太在意细节"
-      },
-      extraversion: {
-        high: "活泼外向，喜欢社交和表达",
-        medium: "在社交上表现适中",
-        low: "内向安静，喜欢深入思考"
-      },
-      agreeableness: {
-        high: "友善合作，富有同情心",
-        medium: "在人际关系上表现平衡",
-        low: "比较直接，不太顾及他人感受"
-      },
-      neuroticism: {
-        high: "情绪波动较大，容易焦虑",
-        medium: "情绪稳定性适中",
-        low: "情绪稳定，不易受外界影响"
-      }
-    };
-    
-    const level = value >= 70 ? 'high' : value >= 40 ? 'medium' : 'low';
-    return descriptions[trait]?.[level] || '表现正常';
-  }
 
   /**
    * 检测交互类型
@@ -556,5 +513,327 @@ export class ChatService {
       this.logger.error(`Error processing skill experience for pet ${petId}:`, error);
       // 不重新抛出错误，避免影响聊天功能
     }
+  }
+
+  /**
+   * 分析对话响应 - 步骤213
+   */
+  async analyzeChatResponse(
+    petId: string,
+    userMessage: string,
+    botResponse: string,
+    personality: any,
+    currentState: any
+  ): Promise<any> {
+    try {
+      this.logger.debug(`Analyzing chat response for pet ${petId}`);
+
+      // 分析对话质量
+      const qualityScore = this.calculateResponseQuality(userMessage, botResponse);
+      
+      // 分析情感色彩
+      const emotionalAnalysis = this.analyzeEmotionalTone(userMessage);
+      
+      // 分析话题深度
+      const topicDepth = this.calculateTopicComplexity(userMessage);
+      
+      // 分析响应适当性
+      const appropriateness = this.analyzeResponseAppropriateness(userMessage, botResponse);
+      
+      // 识别触发的个性特质
+      const personalityInfluences = this.identifyPersonalityTriggers(userMessage, personality);
+      
+      // 计算状态影响
+      const stateInfluences = this.calculateStateInfluences(userMessage, currentState);
+      
+      // 计算相关技能经验
+      const skillExperiences = this.calculateSkillExperiences(userMessage, botResponse);
+
+      return {
+        qualityMetrics: {
+          overall: qualityScore,
+          emotionalColor: emotionalAnalysis,
+          topicDepth,
+          appropriateness
+        },
+        personalityInfluences,
+        stateInfluences,
+        skillExperiences,
+        metadata: {
+          analyzedAt: new Date(),
+          userMessageLength: userMessage.length,
+          botResponseLength: botResponse.length
+        }
+      };
+    } catch (error) {
+      this.logger.error(`Error analyzing chat response for pet ${petId}:`, error);
+      // 返回默认分析结果，避免影响聊天功能
+      return {
+        qualityMetrics: { overall: 0.5, emotionalColor: 0, topicDepth: 0.3, appropriateness: 0.7 },
+        personalityInfluences: {},
+        stateInfluences: {},
+        skillExperiences: [],
+        metadata: { analyzedAt: new Date() }
+      };
+    }
+  }
+
+  /**
+   * 根据对话更新宠物数据 - 步骤214
+   */
+  async updatePetFromChat(petId: string, analysisResult: any, _skills: any[]): Promise<void> {
+    try {
+      this.logger.debug(`Updating pet data from chat for pet ${petId}`);
+
+      // 基于对话分析结果触发个性演化
+      if (analysisResult.personalityInfluences && Object.keys(analysisResult.personalityInfluences).length > 0) {
+        await this.personalityService.processEvolutionIncrement(petId, {
+          type: 'chat_interaction',
+          userMessage: '',
+          botResponse: '',
+          timestamp: new Date(),
+          personalityTriggers: analysisResult.personalityInfluences
+        });
+      }
+
+      // 更新宠物状态
+      if (analysisResult.stateInfluences && Object.keys(analysisResult.stateInfluences).length > 0) {
+        await this.stateService.processStateInteraction(petId, {
+          interactionType: 'chat',
+          intensity: 5, // Medium intensity for chat interactions
+          metadata: { 
+            source: 'chat_analysis',
+            influences: analysisResult.stateInfluences
+          }
+        });
+      }
+
+      // 增加相关技能经验值
+      if (analysisResult.skillExperiences && analysisResult.skillExperiences.length > 0) {
+        for (const skillExp of analysisResult.skillExperiences) {
+          if (skillExp.experience > 0) {
+            await this.skillsService.gainSkillExperience(petId, skillExp.skillId, skillExp.experience);
+          }
+        }
+      }
+
+      this.logger.debug(`Pet data successfully updated from chat for pet ${petId}`);
+    } catch (error) {
+      this.logger.error(`Error updating pet data from chat for pet ${petId}:`, error);
+      // 不重新抛出错误，避免影响聊天功能
+    }
+  }
+
+  /**
+   * 计算响应质量
+   */
+  private calculateResponseQuality(userMessage: string, botResponse: string): number {
+    // 基础质量评分
+    let quality = 0.5;
+    
+    // 响应长度适当性
+    const responseLength = botResponse.length;
+    const messageLength = userMessage.length;
+    const lengthRatio = responseLength / Math.max(messageLength, 1);
+    
+    if (lengthRatio >= 0.8 && lengthRatio <= 3.0) {
+      quality += 0.2;
+    }
+    
+    // 响应相关性（简单关键词匹配）
+    const userKeywords = this.extractKeywords(userMessage);
+    const botKeywords = this.extractKeywords(botResponse);
+    const overlap = userKeywords.filter(keyword => botKeywords.includes(keyword)).length;
+    const relevanceScore = overlap / Math.max(userKeywords.length, 1);
+    quality += relevanceScore * 0.3;
+    
+    return Math.min(quality, 1.0);
+  }
+
+  /**
+   * 分析响应适当性
+   */
+  private analyzeResponseAppropriateness(userMessage: string, botResponse: string): number {
+    // 基础适当性评分
+    let appropriateness = 0.7;
+    
+    // 检查是否包含不当内容（简单实现）
+    const inappropriatePatterns = /[脏话|骂人|攻击性]/g;
+    if (inappropriatePatterns.test(botResponse)) {
+      appropriateness -= 0.3;
+    }
+    
+    // 检查语言风格一致性
+    const userTone = this.detectLanguageTone(userMessage);
+    const botTone = this.detectLanguageTone(botResponse);
+    if (userTone === botTone) {
+      appropriateness += 0.2;
+    }
+    
+    return Math.max(Math.min(appropriateness, 1.0), 0.0);
+  }
+
+  /**
+   * 识别个性特质触发器
+   */
+  private identifyPersonalityTriggers(userMessage: string, _personality: any): Record<string, number> {
+    const triggers: Record<string, number> = {};
+    
+    // 基于消息内容识别可能影响的个性特质
+    const interactionType = this.detectInteractionType(userMessage);
+    
+    switch (interactionType) {
+      case 'creative':
+        triggers.openness = 0.1;
+        triggers.extraversion = 0.05;
+        break;
+      case 'emotional':
+        triggers.agreeableness = 0.1;
+        triggers.neuroticism = -0.05;
+        break;
+      case 'learning':
+        triggers.conscientiousness = 0.1;
+        triggers.openness = 0.05;
+        break;
+      case 'social':
+        triggers.extraversion = 0.1;
+        triggers.agreeableness = 0.05;
+        break;
+    }
+    
+    return triggers;
+  }
+
+  /**
+   * 计算状态影响
+   */
+  private calculateStateInfluences(userMessage: string, _currentState: any): Record<string, number> {
+    const influences: Record<string, number> = {};
+    
+    const emotionalTone = this.analyzeEmotionalTone(userMessage);
+    const interactionType = this.detectInteractionType(userMessage);
+    
+    // 基于情感色彩调整状态
+    if (emotionalTone > 0.3) {
+      influences.happiness = 5;
+      influences.energy = 3;
+    } else if (emotionalTone < -0.3) {
+      influences.happiness = -3;
+      influences.energy = -2;
+    }
+    
+    // 基于交互类型调整状态
+    switch (interactionType) {
+      case 'learning':
+        influences.learning = 10;
+        influences.attention = 5;
+        break;
+      case 'creative':
+        influences.creativity = 10;
+        influences.energy = 3;
+        break;
+      case 'social':
+        influences.social = 8;
+        influences.happiness = 5;
+        break;
+    }
+    
+    return influences;
+  }
+
+  /**
+   * 计算技能经验
+   */
+  private calculateSkillExperiences(userMessage: string, _botResponse: string): Array<{ skillId: string; experience: number }> {
+    const experiences: Array<{ skillId: string; experience: number }> = [];
+    
+    const interactionType = this.detectInteractionType(userMessage);
+    const complexity = this.calculateTopicComplexity(userMessage);
+    const baseExperience = Math.floor(complexity * 10);
+    
+    // 根据交互类型分配经验
+    switch (interactionType) {
+      case 'creative':
+        experiences.push({ skillId: 'poetry_discussion', experience: baseExperience });
+        experiences.push({ skillId: 'creative_thinking', experience: baseExperience * 0.5 });
+        break;
+      case 'learning':
+        experiences.push({ skillId: 'knowledge_sharing', experience: baseExperience });
+        break;
+      case 'social':
+        experiences.push({ skillId: 'communication', experience: baseExperience });
+        experiences.push({ skillId: 'empathy', experience: baseExperience * 0.7 });
+        break;
+      case 'emotional':
+        experiences.push({ skillId: 'empathy', experience: baseExperience });
+        break;
+    }
+    
+    return experiences;
+  }
+
+  /**
+   * 检测语言语调
+   */
+  private detectLanguageTone(message: string): 'formal' | 'casual' | 'friendly' | 'neutral' {
+    if (/您|请问|谢谢|感谢/.test(message)) return 'formal';
+    if (/哈哈|嘿|哟|啊/.test(message)) return 'casual';
+    if (/喜欢|开心|不错|好的/.test(message)) return 'friendly';
+    return 'neutral';
+  }
+
+  /**
+   * 转换PersonalityTraits到Record<PersonalityTrait, number>
+   */
+  private convertPersonalityTraits(personality: any): Record<PersonalityTrait, number> {
+    const converted: Record<PersonalityTrait, number> = {
+      [PersonalityTrait.OPENNESS]: personality.openness || 50,
+      [PersonalityTrait.CONSCIENTIOUSNESS]: personality.conscientiousness || 50,
+      [PersonalityTrait.EXTRAVERSION]: personality.extraversion || 50,
+      [PersonalityTrait.AGREEABLENESS]: personality.agreeableness || 50,
+      [PersonalityTrait.NEUROTICISM]: personality.neuroticism || 30,
+      [PersonalityTrait.CREATIVITY]: personality.creativity || 50,
+      [PersonalityTrait.EMPATHY]: personality.empathy || 50,
+      [PersonalityTrait.CURIOSITY]: personality.curiosity || 50,
+      [PersonalityTrait.PLAYFULNESS]: personality.playfulness || 50,
+      [PersonalityTrait.INTELLIGENCE]: personality.intelligence || 50,
+    };
+    return converted;
+  }
+
+  /**
+   * 转换PetState到PetStateDto
+   */
+  private convertPetStateToDto(petId: string, state: any): PetStateDto {
+    const basic = state.basic || {};
+    const advanced = state.advanced || {};
+    
+    return {
+      petId,
+      hunger: basic.hunger || 50,
+      fatigue: 100 - (basic.energy || 80), // Convert energy to fatigue
+      happiness: basic.mood || 70,
+      health: basic.health || 90,
+      social: advanced.socialDesire || 60,
+      learning: advanced.focusLevel || 70,
+      creativity: advanced.creativity || 65,
+      exploration: advanced.curiosity || 75,
+      mood: this.convertToMoodEnum(basic.mood || 70),
+      currentActivity: PetActivity.CHATTING,
+      energyLevel: basic.energy || 80,
+      attention: advanced.focusLevel || 70,
+      lastUpdated: state.lastUpdate || new Date()
+    };
+  }
+
+  /**
+   * 转换数值心情到枚举
+   */
+  private convertToMoodEnum(moodValue: number): PetMood {
+    if (moodValue >= 90) return PetMood.EXCITED;
+    if (moodValue >= 70) return PetMood.HAPPY;
+    if (moodValue >= 50) return PetMood.CALM;
+    if (moodValue >= 30) return PetMood.RELAXED;
+    return PetMood.SLEEPY;
   }
 }
