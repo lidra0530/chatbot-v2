@@ -6,6 +6,8 @@ import { PersonalityCacheService } from './services/personality-cache.service';
 import { EvolutionHistoryService } from './services/evolution-history.service';
 import { EvolutionBatchService } from './services/evolution-batch.service';
 import { EvolutionCleanupService } from './services/evolution-cleanup.service';
+import { RealtimeEventsService } from '../../gateways/services/realtime-events.service';
+import { PersonalityTrait } from '../../algorithms/types/personality.types';
 
 /**
  * PersonalityService - 外观模式主服务
@@ -23,9 +25,10 @@ export class PersonalityService {
     private readonly cacheService: PersonalityCacheService,
     private readonly historyService: EvolutionHistoryService,
     private readonly batchService: EvolutionBatchService,
-    private readonly cleanupService: EvolutionCleanupService
+    private readonly cleanupService: EvolutionCleanupService,
+    private readonly realtimeEvents: RealtimeEventsService
   ) {
-    this.logger.log('PersonalityService initialized as facade with all specialized services');
+    this.logger.log('PersonalityService initialized as facade with all specialized services and realtime events');
   }
 
   // ===== 个性特质管理 API =====
@@ -59,15 +62,23 @@ export class PersonalityService {
   /**
    * 更新宠物个性特质
    */
-  async updatePersonalityTraits(petId: string, traits: PersonalityTraits): Promise<PersonalityTraits> {
+  async updatePersonalityTraits(petId: string, traits: PersonalityTraits, userId?: string, oldTraits?: PersonalityTraits): Promise<PersonalityTraits> {
     try {
       this.logger.debug(`Delegating updatePersonalityTraits to cache service for pet ${petId}`);
+      
+      // 获取旧的特质值用于比较
+      const previousTraits = oldTraits || await this.getPersonalityDetails(petId);
       
       // 更新缓存
       await this.cacheService.cachePersonalityAnalysis(petId, { traits });
       
       // 清理相关缓存
       await this.cacheService.invalidatePersonalityCache(petId);
+      
+      // 步骤241: 在个性演化时发送实时通知
+      if (userId) {
+        await this.sendPersonalityEvolutionEvents(petId, userId, previousTraits, traits);
+      }
       
       this.logger.debug(`Personality traits updated successfully for pet ${petId}`);
       
@@ -598,5 +609,46 @@ export class PersonalityService {
     });
     
     return expiredKeys;
+  }
+
+  /**
+   * 步骤241: 发送个性演化实时事件
+   */
+  private async sendPersonalityEvolutionEvents(
+    petId: string,
+    userId: string,
+    oldTraits: PersonalityTraits,
+    newTraits: PersonalityTraits
+  ): Promise<void> {
+    try {
+      // 检查每个特质的变化
+      const traitMapping: Record<keyof PersonalityTraits, PersonalityTrait> = {
+        openness: PersonalityTrait.OPENNESS,
+        conscientiousness: PersonalityTrait.CONSCIENTIOUSNESS,
+        extraversion: PersonalityTrait.EXTRAVERSION,
+        agreeableness: PersonalityTrait.AGREEABLENESS,
+        neuroticism: PersonalityTrait.NEUROTICISM
+      };
+
+      for (const [traitKey, personalityTrait] of Object.entries(traitMapping)) {
+        const oldValue = oldTraits[traitKey as keyof PersonalityTraits] || 50;
+        const newValue = newTraits[traitKey as keyof PersonalityTraits] || 50;
+        
+        // 只有当变化足够大时才发送事件（至少1点变化）
+        if (Math.abs(newValue - oldValue) >= 1) {
+          await this.realtimeEvents.pushPersonalityEvolution(
+            petId,
+            userId,
+            personalityTrait,
+            oldValue,
+            newValue,
+            '个性特质更新'
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send personality evolution events for pet ${petId}`, error);
+      // 不要抛出错误，避免影响主要的更新流程
+    }
   }
 }

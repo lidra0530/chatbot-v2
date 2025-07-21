@@ -5,11 +5,13 @@ import { StateController } from './state.controller';
 import { StateService } from './state.service';
 import { StatePersistenceService } from './services/state-persistence.service';
 import { PrismaService } from '../../common/prisma.service';
+import { GatewaysModule } from '../../gateways/gateways.module';
 
 @Module({
   imports: [
     JwtModule,
-    ScheduleModule.forRoot()
+    ScheduleModule.forRoot(),
+    GatewaysModule
   ],
   controllers: [StateController],
   providers: [

@@ -5,13 +5,14 @@ import { SkillsService } from './skills.service';
 import { PrismaService } from '../../common/prisma.service';
 import { SkillsCacheService } from './services/skills-cache.service';
 import { SkillsPersistenceService } from './services/skills-persistence.service';
+import { GatewaysModule } from '../../gateways/gateways.module';
 
 /**
  * 步骤167: 技能树系统模块
  * 负责技能管理、解锁、升级和经验值计算
  */
 @Module({
-  imports: [JwtModule],
+  imports: [JwtModule, GatewaysModule],
   controllers: [SkillsController],
   providers: [
     SkillsService,

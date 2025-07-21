@@ -9,6 +9,7 @@ import {
 } from '../../config/state-mappings.config';
 import { StateUpdateDto, StateInteractionDto, StateHistoryDto, StateUpdateTrigger } from './dto';
 import { StatePersistenceService } from './services/state-persistence.service';
+import { RealtimeEventsService } from '../../gateways/services/realtime-events.service';
 
 /**
  * 状态系统服务类
@@ -21,10 +22,11 @@ export class StateService {
 
   constructor(
     private prisma: PrismaService,
-    private persistenceService: StatePersistenceService
+    private persistenceService: StatePersistenceService,
+    private realtimeEvents: RealtimeEventsService
   ) {
     this.stateEngine = new StateDriverEngine();
-    this.logger.log('StateService initialized');
+    this.logger.log('StateService initialized with realtime events');
   }
 
   /**
@@ -99,7 +101,7 @@ export class StateService {
    * @param stateUpdate 状态更新数据
    * @returns 更新后的状态
    */
-  async updatePetState(petId: string, stateUpdate: StateUpdateDto): Promise<PetState> {
+  async updatePetState(petId: string, stateUpdate: StateUpdateDto, userId?: string): Promise<PetState> {
     this.logger.debug(`Updating state for pet: ${petId}`);
 
     try {
@@ -124,6 +126,11 @@ export class StateService {
         stateUpdate.reason
       );
       
+      // 步骤243: 在状态变化时发送实时通知
+      if (userId) {
+        await this.checkAndSendStateMilestones(petId, userId, currentState, boundedState, stateUpdate.trigger);
+      }
+      
       this.logger.debug(`State updated successfully for pet ${petId}`);
       return boundedState as PetState;
     } catch (error) {
@@ -138,7 +145,7 @@ export class StateService {
    * @param interactionData 交互数据
    * @returns 处理后的状态
    */
-  async processStateInteraction(petId: string, interactionData: StateInteractionDto): Promise<PetState> {
+  async processStateInteraction(petId: string, interactionData: StateInteractionDto, userId?: string): Promise<PetState> {
     this.logger.debug(`Processing state interaction for pet: ${petId}`);
 
     try {
@@ -174,6 +181,11 @@ export class StateService {
           duration: interactionData.duration 
         }
       );
+      
+      // 步骤243: 在状态变化时发送实时通知
+      if (userId) {
+        await this.checkAndSendStateMilestones(petId, userId, currentState, boundedState, StateUpdateTrigger.INTERACTION);
+      }
       
       this.logger.debug(`State interaction processed for pet ${petId}`);
       return boundedState;
@@ -356,4 +368,150 @@ export class StateService {
     if (description.includes('conversation')) return StateUpdateTrigger.CONVERSATION;
     return StateUpdateTrigger.MANUAL;
   }
+
+  /**
+   * 步骤243: 检查并发送状态里程碑事件
+   */
+  private async checkAndSendStateMilestones(
+    petId: string,
+    userId: string,
+    oldState: PetState,
+    newState: PetState,
+    _trigger: StateUpdateTrigger
+  ): Promise<void> {
+    try {
+      // 定义里程碑阈值
+      const milestones = [
+        { type: 'mood' as const, thresholds: [25, 50, 75, 90] },
+        { type: 'energy' as const, thresholds: [20, 40, 60, 80, 100] },
+        { type: 'health' as const, thresholds: [30, 60, 90] },
+        { type: 'social' as const, thresholds: [25, 50, 75] },
+        { type: 'activity' as const, thresholds: [20, 40, 60, 80] }
+      ];
+
+      // const triggerDescription = this.getTriggerDescription(trigger);
+
+      for (const milestone of milestones) {
+        const oldValue = this.getStateValue(oldState, milestone.type);
+        const newValue = this.getStateValue(newState, milestone.type);
+
+        for (const threshold of milestone.thresholds) {
+          // 检查是否跨越了里程碑阈值
+          if (oldValue < threshold && newValue >= threshold) {
+            // 达到里程碑
+            await this.realtimeEvents.pushStateMilestone(petId, userId, {
+              milestoneType: milestone.type,
+              milestone: `${milestone.type}达到${threshold}`,
+              currentValue: newValue,
+              previousValue: oldValue,
+              achievement: this.getAchievementForMilestone(milestone.type, threshold),
+              description: `宠物的${this.getStateDisplayName(milestone.type)}提升到了${threshold}，表现优秀！`,
+              reward: {
+                type: 'experience',
+                value: Math.floor(threshold / 10) * 5
+              },
+              nextMilestone: this.getNextMilestone(milestone.type, threshold, milestone.thresholds)
+            });
+          } else if (oldValue >= threshold && newValue < threshold) {
+            // 跌破里程碑（负面事件）
+            await this.realtimeEvents.pushStateMilestone(petId, userId, {
+              milestoneType: milestone.type,
+              milestone: `${milestone.type}跌破${threshold}`,
+              currentValue: newValue,
+              previousValue: oldValue,
+              achievement: `需要关注${this.getStateDisplayName(milestone.type)}`,
+              description: `宠物的${this.getStateDisplayName(milestone.type)}下降到${threshold}以下，需要更多关注。`,
+              nextMilestone: `恢复到${threshold}以上`
+            });
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send state milestone events for pet ${petId}`, error);
+      // 不要抛出错误，避免影响主要的状态更新流程
+    }
+  }
+
+  /**
+   * 获取状态值
+   */
+  private getStateValue(state: PetState, type: 'mood' | 'energy' | 'health' | 'social' | 'activity'): number {
+    switch (type) {
+      case 'mood':
+        return (state as any).emotional?.mood || (state as any).mood || 50;
+      case 'energy':
+        return (state as any).basic?.energy || (state as any).energy || 50;
+      case 'health':
+        return (state as any).basic?.health || (state as any).health || 100;
+      case 'social':
+        return (state as any).social?.socialDesire || (state as any).socialDesire || 50;
+      case 'activity':
+        return (state as any).activity?.activityLevel || (state as any).activityLevel || 50;
+      default:
+        return 50;
+    }
+  }
+
+  /**
+   * 获取状态显示名称
+   */
+  private getStateDisplayName(type: 'mood' | 'energy' | 'health' | 'social' | 'activity'): string {
+    const names = {
+      mood: '心情',
+      energy: '精力',
+      health: '健康',
+      social: '社交欲望',
+      activity: '活跃度'
+    };
+    return names[type];
+  }
+
+  /**
+   * 获取里程碑成就描述
+   */
+  private getAchievementForMilestone(type: string, threshold: number): string {
+    const achievements = {
+      mood: {
+        25: '心情小有改善',
+        50: '心情平衡',
+        75: '心情愉悦',
+        90: '心情极佳'
+      },
+      energy: {
+        20: '精力恢复',
+        40: '精力充沛',
+        60: '精力旺盛',
+        80: '精力满满',
+        100: '精力巅峰'
+      },
+      health: {
+        30: '健康改善',
+        60: '健康良好',
+        90: '健康优秀'
+      },
+      social: {
+        25: '社交需求觉醒',
+        50: '社交平衡',
+        75: '社交活跃'
+      },
+      activity: {
+        20: '开始活跃',
+        40: '活跃增长',
+        60: '积极活跃',
+        80: '超级活跃'
+      }
+    };
+
+    const typeAchievements = achievements[type as keyof typeof achievements];
+    return typeAchievements?.[threshold as keyof typeof typeAchievements] || `${type}达到${threshold}`;
+  }
+
+  /**
+   * 获取下一个里程碑
+   */
+  private getNextMilestone(type: string, currentThreshold: number, allThresholds: number[]): string | undefined {
+    const nextThreshold = allThresholds.find(t => t > currentThreshold);
+    return nextThreshold ? `${this.getStateDisplayName(type as any)}达到${nextThreshold}` : undefined;
+  }
+
 }

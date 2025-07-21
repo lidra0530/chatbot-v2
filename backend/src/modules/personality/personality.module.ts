@@ -13,9 +13,10 @@ import { PersonalityAnalyticsService } from './services/personality-analytics.se
 import { PersonalityEvolutionEngine } from '../../algorithms/personality-evolution';
 import { InteractionClassifier } from '../../algorithms/interaction-classifier';
 import { DistributedLockService, RateLimitService } from './utils/concurrency-control';
+import { GatewaysModule } from '../../gateways/gateways.module';
 
 @Module({
-  imports: [JwtModule],
+  imports: [JwtModule, GatewaysModule],
   controllers: [PersonalityController],
   providers: [
     // 现有服务保持不变

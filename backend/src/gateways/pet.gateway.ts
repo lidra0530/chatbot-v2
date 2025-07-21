@@ -25,7 +25,8 @@ export class PetGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   server!: Server;
 
   private readonly logger = new Logger(PetGateway.name);
-  private connectedUsers = new Map<string, { socket: Socket; userId: string; petId?: string }>();
+  private connectedUsers = new Map<string, { socket: Socket; userId: string; petId?: string; lastPing?: Date }>();
+  private heartbeatInterval?: NodeJS.Timeout;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -34,6 +35,9 @@ export class PetGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
 
   afterInit() {
     this.logger.log('PetGateway WebSocket server initialized');
+    
+    // 步骤244: 启动心跳检测
+    this.startHeartbeatMonitoring();
   }
 
   async handleConnection(client: Socket) {
@@ -60,7 +64,11 @@ export class PetGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
       this.connectedUsers.set(client.id, {
         socket: client,
         userId: payload.sub,
+        lastPing: new Date(),
       });
+
+      // 步骤244: 设置连接监控
+      this.setupConnectionMonitoring(client);
 
       this.logger.log(`User ${payload.sub} connected via WebSocket: ${client.id}`);
       
@@ -69,6 +77,8 @@ export class PetGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
         message: '连接成功',
         userId: payload.sub,
         timestamp: new Date().toISOString(),
+        heartbeatInterval: 30000, // 30秒心跳间隔
+        reconnectSupported: true,
       });
 
     } catch (error) {
@@ -88,6 +98,9 @@ export class PetGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
         client.leave(`pet:${userInfo.petId}`);
         this.logger.debug(`User ${userInfo.userId} left pet room: ${userInfo.petId}`);
       }
+      
+      // 步骤244: 清理连接监控
+      this.cleanupConnectionMonitoring(client);
       
       // 移除连接记录
       this.connectedUsers.delete(client.id);
@@ -181,11 +194,61 @@ export class PetGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     const userInfo = this.connectedUsers.get(client.id);
     
     if (userInfo) {
+      // 步骤244: 更新最后心跳时间
+      userInfo.lastPing = new Date();
+      
       client.emit('pong', {
         timestamp: new Date().toISOString(),
         userId: userInfo.userId,
         petId: userInfo.petId,
+        serverTime: Date.now(),
       });
+    }
+  }
+
+  @SubscribeMessage('reconnect_request')
+  async handleReconnectRequest(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { lastEventId?: string; petId?: string }
+  ) {
+    const userInfo = this.connectedUsers.get(client.id);
+    
+    if (!userInfo) {
+      client.emit('reconnect_failed', { message: '用户信息不存在' });
+      return;
+    }
+
+    try {
+      // 步骤244: 处理重连逻辑
+      const reconnectData: any = {
+        message: '重连成功',
+        userId: userInfo.userId,
+        timestamp: new Date().toISOString(),
+        serverTime: Date.now(),
+      };
+
+      // 如果客户端请求恢复到特定宠物房间
+      if (data.petId) {
+        const pet = await this.prisma.pet.findFirst({
+          where: {
+            id: data.petId,
+            userId: userInfo.userId,
+          },
+        });
+
+        if (pet) {
+          client.join(`pet:${data.petId}`);
+          userInfo.petId = data.petId;
+          reconnectData.petId = data.petId;
+          reconnectData.petName = pet.name;
+          this.logger.log(`User ${userInfo.userId} reconnected to pet room: ${data.petId}`);
+        }
+      }
+
+      client.emit('reconnect_success', reconnectData);
+    } catch (error) {
+      this.logger.error(`Reconnect failed for user ${userInfo.userId}:`, error);
+      client.emit('reconnect_failed', { message: '重连失败' });
     }
   }
 
@@ -260,5 +323,143 @@ export class PetGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
       this.logger.debug(`Token validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
+  }
+
+  /**
+   * 步骤244: 启动心跳监控
+   */
+  private startHeartbeatMonitoring(): void {
+    // 每60秒检查一次连接状态
+    this.heartbeatInterval = setInterval(() => {
+      this.checkConnectionHealth();
+    }, 60000);
+    
+    this.logger.log('Heartbeat monitoring started');
+  }
+
+  /**
+   * 步骤244: 检查连接健康状态
+   */
+  private checkConnectionHealth(): void {
+    const now = new Date();
+    const timeoutThreshold = 2 * 60 * 1000; // 2分钟超时
+    const disconnectedClients: string[] = [];
+
+    for (const [clientId, userInfo] of this.connectedUsers.entries()) {
+      const lastPing = userInfo.lastPing || new Date(0);
+      const timeSinceLastPing = now.getTime() - lastPing.getTime();
+
+      if (timeSinceLastPing > timeoutThreshold) {
+        this.logger.warn(`Client ${clientId} (user: ${userInfo.userId}) appears to be inactive (${Math.round(timeSinceLastPing / 1000)}s since last ping)`);
+        
+        // 尝试发送ping以确认连接状态
+        userInfo.socket.emit('server_ping', {
+          timestamp: now.toISOString(),
+          timeoutWarning: true,
+        });
+
+        // 如果超过3分钟没有响应，强制断开连接
+        if (timeSinceLastPing > 3 * 60 * 1000) {
+          disconnectedClients.push(clientId);
+        }
+      }
+    }
+
+    // 清理不活跃的连接
+    disconnectedClients.forEach(clientId => {
+      const userInfo = this.connectedUsers.get(clientId);
+      if (userInfo) {
+        this.logger.log(`Force disconnecting inactive client: ${clientId} (user: ${userInfo.userId})`);
+        userInfo.socket.disconnect(true);
+      }
+    });
+
+    if (disconnectedClients.length > 0) {
+      this.logger.log(`Cleaned up ${disconnectedClients.length} inactive connections`);
+    }
+  }
+
+  /**
+   * 步骤244: 设置连接监控
+   */
+  private setupConnectionMonitoring(client: Socket): void {
+    // 监听连接错误
+    client.on('error', (error) => {
+      const userInfo = this.connectedUsers.get(client.id);
+      this.logger.error(`Socket error for client ${client.id} (user: ${userInfo?.userId}):`, error);
+    });
+
+    // 监听连接断开
+    client.on('disconnect', (reason) => {
+      const userInfo = this.connectedUsers.get(client.id);
+      this.logger.debug(`Client ${client.id} (user: ${userInfo?.userId}) disconnected: ${reason}`);
+    });
+
+    // 定期发送服务器端ping
+    const clientPingInterval = setInterval(() => {
+      if (client.connected) {
+        client.emit('server_ping', {
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        clearInterval(clientPingInterval);
+      }
+    }, 30000); // 30秒间隔
+
+    // 保存ping间隔引用以便清理
+    (client as any).pingInterval = clientPingInterval;
+  }
+
+  /**
+   * 步骤244: 清理连接监控
+   */
+  private cleanupConnectionMonitoring(client: Socket): void {
+    // 清理ping间隔
+    const pingInterval = (client as any).pingInterval;
+    if (pingInterval) {
+      clearInterval(pingInterval);
+      delete (client as any).pingInterval;
+    }
+  }
+
+  /**
+   * 步骤244: 优雅关闭WebSocket服务器
+   */
+  async gracefulShutdown(): Promise<void> {
+    this.logger.log('Starting graceful shutdown of WebSocket gateway');
+
+    // 停止心跳监控
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = undefined;
+    }
+
+    // 通知所有客户端服务器即将关闭
+    this.server.emit('server_shutdown', {
+      message: '服务器即将重启，请稍后重新连接',
+      timestamp: new Date().toISOString(),
+      reconnectDelay: 5000, // 建议5秒后重连
+    });
+
+    // 等待客户端处理关闭通知
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 逐个断开连接
+    const disconnectPromises: Promise<void>[] = [];
+    for (const [_clientId, userInfo] of this.connectedUsers.entries()) {
+      disconnectPromises.push(
+        new Promise<void>((resolve) => {
+          userInfo.socket.on('disconnect', () => resolve());
+          userInfo.socket.disconnect(true);
+          // 最多等待1秒
+          setTimeout(() => resolve(), 1000);
+        })
+      );
+    }
+
+    await Promise.all(disconnectPromises);
+    this.connectedUsers.clear();
+
+    this.logger.log('WebSocket gateway graceful shutdown completed');
   }
 }

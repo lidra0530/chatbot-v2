@@ -3,6 +3,7 @@ import { PrismaService } from '../../common/prisma.service';
 import { SkillSystemEngine, PetSkillProgress, SkillStatus } from '../../algorithms/skill-system';
 import { SKILL_DEFINITIONS_MAP, SKILL_SYSTEM_CONFIG } from '../../config/skill-mappings.config';
 import { SkillsPersistenceService } from './services/skills-persistence.service';
+import { RealtimeEventsService } from '../../gateways/services/realtime-events.service';
 import {
   SkillDto,
   SkillExperienceGainDto,
@@ -31,10 +32,11 @@ export class SkillsService {
 
   constructor(
     private prisma: PrismaService,
-    private persistenceService: SkillsPersistenceService
+    private persistenceService: SkillsPersistenceService,
+    private realtimeEvents: RealtimeEventsService
   ) {
     this.skillEngine = new SkillSystemEngine(SKILL_DEFINITIONS_MAP, SKILL_SYSTEM_CONFIG);
-    this.logger.log('SkillsService initialized with SkillSystemEngine and PersistenceService');
+    this.logger.log('SkillsService initialized with SkillSystemEngine, PersistenceService and RealtimeEventsService');
   }
 
   /**
@@ -174,7 +176,11 @@ export class SkillsService {
 
     if (result.success) {
       // 保存到数据库
-      await this.saveSkillProgress(petId, petData.skills.get(request.skillId)!);
+      const unlockedSkillProgress = petData.skills.get(request.skillId)!;
+      await this.saveSkillProgress(petId, unlockedSkillProgress);
+      
+      // 步骤242: 在技能解锁时发送实时通知
+      await this.sendSkillUnlockedEvent(petId, pet.userId, request.skillId, unlockedSkillProgress);
       
       this.logger.log(`Skill ${request.skillId} successfully unlocked for pet ${petId}`);
     }
@@ -846,5 +852,49 @@ export class SkillsService {
    */
   private containsKeywords(text: string, keywords: string[]): boolean {
     return keywords.some(keyword => text.includes(keyword));
+  }
+
+  /**
+   * 步骤242: 发送技能解锁实时事件
+   */
+  private async sendSkillUnlockedEvent(
+    petId: string,
+    userId: string,
+    skillId: string,
+    skillProgress: PetSkillProgress
+  ): Promise<void> {
+    try {
+      const skillDef = SKILL_DEFINITIONS_MAP.get(skillId);
+      if (!skillDef) {
+        this.logger.warn(`Skill definition not found for ${skillId}, cannot send unlock event`);
+        return;
+      }
+
+      // 提取技能的能力列表
+      const abilities = skillDef.effects.map(effect => 
+        `${effect.type}: ${effect.target} (${effect.modifier > 0 ? '+' : ''}${effect.modifier})`
+      );
+
+      // 提取前置条件描述
+      const prerequisites = skillDef.unlockConditions.map(condition => condition.description);
+
+      await this.realtimeEvents.pushSkillUnlocked(petId, userId, {
+        skillId: skillProgress.skillId,
+        skillName: skillDef.name,
+        category: skillDef.category,
+        level: skillProgress.level,
+        unlockCondition: '满足所有解锁条件',
+        description: skillDef.description,
+        requiredExperience: skillProgress.experienceRequired,
+        currentExperience: skillProgress.experience,
+        abilities,
+        prerequisites
+      });
+
+      this.logger.debug(`Skill unlock event sent for skill ${skillId} of pet ${petId}`);
+    } catch (error) {
+      this.logger.error(`Failed to send skill unlock event for skill ${skillId} of pet ${petId}`, error);
+      // 不要抛出错误，避免影响主要的解锁流程
+    }
   }
 }
