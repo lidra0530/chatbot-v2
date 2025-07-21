@@ -9,6 +9,7 @@ import { CostControlService } from '../../common/cost-control/cost-control.servi
 import { SkillsService } from '../skills/skills.service';
 import { StateService } from '../state/state.service';
 import { PromptGeneratorEngine } from '../../algorithms/prompt-generator';
+import { RealtimeEventsService } from '../../gateways/services/realtime-events.service';
 import { PersonalityTrait } from '../../algorithms/types/personality.types';
 import { PetStateDto, PetMood, PetActivity } from '../state/dto/pet-state.dto';
 import { ChatCompletionDto } from './dto/chat-completion.dto';
@@ -30,8 +31,9 @@ export class ChatService {
     private readonly skillsService: SkillsService,
     private readonly stateService: StateService,
     private readonly promptGenerator: PromptGeneratorEngine,
+    private readonly realtimeEvents: RealtimeEventsService,
   ) {
-    this.logger.log('ChatService initialized with LLM integration, performance monitoring, caching, cost control, skills integration and prompt generation engine');
+    this.logger.log('ChatService initialized with LLM integration, performance monitoring, caching, cost control, skills integration, prompt generation engine and realtime events');
   }
 
   async processEnhancedChat(userId: string, dto: ChatCompletionDto): Promise<ChatResponseDto> {
@@ -601,14 +603,30 @@ export class ChatService {
   }
 
   /**
-   * 根据对话更新宠物数据 - 步骤214
+   * 根据对话更新宠物数据 - 步骤214（集成实时事件推送）
    */
   async updatePetFromChat(petId: string, analysisResult: any, _skills: any[]): Promise<void> {
     try {
       this.logger.debug(`Updating pet data from chat for pet ${petId}`);
+      
+      // 获取用户ID
+      const pet = await this.prisma.pet.findUnique({
+        where: { id: petId },
+        select: { userId: true }
+      });
+      
+      if (!pet) {
+        this.logger.warn(`Pet ${petId} not found, skipping updates`);
+        return;
+      }
+
+      const userId = pet.userId;
 
       // 基于对话分析结果触发个性演化
       if (analysisResult.personalityInfluences && Object.keys(analysisResult.personalityInfluences).length > 0) {
+        // 获取演化前的个性数据
+        const beforePersonality = await this.personalityService.getPersonalityDetails(petId);
+        
         await this.personalityService.processEvolutionIncrement(petId, {
           type: 'chat_interaction',
           userMessage: '',
@@ -616,10 +634,34 @@ export class ChatService {
           timestamp: new Date(),
           personalityTriggers: analysisResult.personalityInfluences
         });
+
+        // 获取演化后的个性数据并推送事件
+        const afterPersonality = await this.personalityService.getPersonalityDetails(petId);
+        
+        // 检查每个特质的变化并推送相应的演化事件
+        for (const [traitKey] of Object.entries(analysisResult.personalityInfluences)) {
+          const trait = traitKey as PersonalityTrait;
+          const oldValue = beforePersonality[traitKey] || 50;
+          const newValue = afterPersonality[traitKey] || 50;
+          
+          if (Math.abs(newValue - oldValue) >= 1) { // 只有显著变化才推送事件
+            await this.realtimeEvents.pushPersonalityEvolution(
+              petId,
+              userId,
+              trait,
+              oldValue,
+              newValue,
+              '聊天互动'
+            );
+          }
+        }
       }
 
       // 更新宠物状态
       if (analysisResult.stateInfluences && Object.keys(analysisResult.stateInfluences).length > 0) {
+        // 获取状态更新前的数据
+        const beforeState = await this.stateService.getCurrentState(petId);
+        
         await this.stateService.processStateInteraction(petId, {
           interactionType: 'chat',
           intensity: 5, // Medium intensity for chat interactions
@@ -628,16 +670,56 @@ export class ChatService {
             influences: analysisResult.stateInfluences
           }
         });
+
+        // 获取状态更新后的数据并检查里程碑
+        const afterState = await this.stateService.getCurrentState(petId);
+        
+        // 检查状态里程碑
+        await this.checkAndPushStateMilestones(petId, userId, beforeState, afterState);
       }
 
-      // 增加相关技能经验值
+      // 增加相关技能经验值并检查解锁
       if (analysisResult.skillExperiences && analysisResult.skillExperiences.length > 0) {
         for (const skillExp of analysisResult.skillExperiences) {
           if (skillExp.experience > 0) {
+            // 获取技能经验增加前的数据
+            const beforeSkills = await this.skillsService.getSkillTree(petId);
+            const beforeSkill = beforeSkills.find(s => s.definition.id === skillExp.skillId);
+            
             await this.skillsService.gainSkillExperience(petId, skillExp.skillId, skillExp.experience);
+            
+            // 获取技能经验增加后的数据
+            const afterSkills = await this.skillsService.getSkillTree(petId);
+            const afterSkill = afterSkills.find(s => s.definition.id === skillExp.skillId);
+            
+            // 检查是否有技能解锁
+            if (beforeSkill && afterSkill && beforeSkill.progress && afterSkill.progress) {
+              // 检查技能状态变化（从未解锁到已解锁）
+              const wasLocked = beforeSkill.progress.status === 'locked';
+              const isUnlocked = afterSkill.progress.status === 'unlocked';
+              
+              if (wasLocked && isUnlocked) {
+                // 技能刚解锁，推送解锁事件
+                await this.realtimeEvents.pushSkillUnlocked(petId, userId, {
+                  skillId: afterSkill.definition.id,
+                  skillName: afterSkill.definition.name,
+                  category: afterSkill.definition.category,
+                  level: afterSkill.progress.level,
+                  unlockCondition: '通过聊天互动',
+                  description: afterSkill.definition.description,
+                  requiredExperience: afterSkill.progress.experienceRequired,
+                  currentExperience: afterSkill.progress.experience,
+                  abilities: afterSkill.definition.effects?.map((effect: any) => effect.description) || [],
+                  prerequisites: afterSkill.definition.unlockConditions?.map((condition: any) => condition.description) || []
+                });
+              }
+            }
           }
         }
       }
+
+      // 随机检查是否触发演化机会事件
+      await this.checkAndPushEvolutionOpportunity(petId, userId, analysisResult);
 
       this.logger.debug(`Pet data successfully updated from chat for pet ${petId}`);
     } catch (error) {
@@ -1080,6 +1162,207 @@ export class ChatService {
         analyzedAt: new Date(), 
         analysisType: 'default' 
       }
+    };
+  }
+
+  /**
+   * 检查并推送状态里程碑事件
+   */
+  private async checkAndPushStateMilestones(petId: string, userId: string, beforeState: any, afterState: any): Promise<void> {
+    try {
+      // 检查能量里程碑
+      if (this.crossedMilestone(beforeState.energy, afterState.energy, [25, 50, 75, 90])) {
+        const milestone = this.getMilestoneLevel(afterState.energy, [25, 50, 75, 90]);
+        await this.realtimeEvents.pushStateMilestone(petId, userId, {
+          milestoneType: 'energy',
+          milestone: `能量等级${milestone}`,
+          currentValue: afterState.energy,
+          previousValue: beforeState.energy,
+          achievement: this.getEnergyAchievement(afterState.energy),
+          description: `宠物的能量水平达到了${afterState.energy}点！`,
+          reward: afterState.energy >= 90 ? { type: 'experience', value: 10 } : undefined,
+          nextMilestone: this.getNextMilestone(afterState.energy, [25, 50, 75, 90])
+        });
+      }
+
+      // 检查心情里程碑
+      if (this.crossedMilestone(beforeState.happiness, afterState.happiness, [30, 60, 85])) {
+        const milestone = this.getMilestoneLevel(afterState.happiness, [30, 60, 85]);
+        await this.realtimeEvents.pushStateMilestone(petId, userId, {
+          milestoneType: 'mood',
+          milestone: `心情等级${milestone}`,
+          currentValue: afterState.happiness,
+          previousValue: beforeState.happiness,
+          achievement: this.getHappinessAchievement(afterState.happiness),
+          description: `宠物的心情指数达到了${afterState.happiness}点！`,
+          reward: afterState.happiness >= 85 ? { type: 'unlock', value: '特殊互动' } : undefined,
+          nextMilestone: this.getNextMilestone(afterState.happiness, [30, 60, 85])
+        });
+      }
+
+      // 检查健康里程碑
+      if (this.crossedMilestone(beforeState.health, afterState.health, [40, 70, 95])) {
+        const milestone = this.getMilestoneLevel(afterState.health, [40, 70, 95]);
+        await this.realtimeEvents.pushStateMilestone(petId, userId, {
+          milestoneType: 'health',
+          milestone: `健康等级${milestone}`,
+          currentValue: afterState.health,
+          previousValue: beforeState.health,
+          achievement: this.getHealthAchievement(afterState.health),
+          description: `宠物的健康状况达到了${afterState.health}点！`,
+          reward: afterState.health >= 95 ? { type: 'bonus', value: '生命力增强' } : undefined,
+          nextMilestone: this.getNextMilestone(afterState.health, [40, 70, 95])
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Error checking state milestones for pet ${petId}:`, error);
+    }
+  }
+
+  /**
+   * 检查并推送演化机会事件
+   */
+  private async checkAndPushEvolutionOpportunity(petId: string, userId: string, analysisResult: any): Promise<void> {
+    try {
+      // 基于分析结果和随机因子决定是否触发演化机会
+      const shouldTrigger = Math.random() < 0.15; // 15%的概率触发
+      
+      if (!shouldTrigger) return;
+
+      const opportunityType = this.determineOpportunityType(analysisResult);
+      const opportunity = this.generateEvolutionOpportunity(opportunityType, analysisResult);
+      
+      if (opportunity) {
+        await this.realtimeEvents.pushEvolutionOpportunity(petId, userId, opportunity);
+      }
+    } catch (error) {
+      this.logger.error(`Error checking evolution opportunity for pet ${petId}:`, error);
+    }
+  }
+
+  /**
+   * 辅助方法：检查是否跨越了里程碑
+   */
+  private crossedMilestone(oldValue: number, newValue: number, milestones: number[]): boolean {
+    return milestones.some(milestone => 
+      (oldValue < milestone && newValue >= milestone) || 
+      (oldValue >= milestone && newValue < milestone)
+    );
+  }
+
+  /**
+   * 辅助方法：获取里程碑等级
+   */
+  private getMilestoneLevel(value: number, milestones: number[]): number {
+    return milestones.filter(m => value >= m).length;
+  }
+
+  /**
+   * 辅助方法：获取下一个里程碑
+   */
+  private getNextMilestone(value: number, milestones: number[]): string | undefined {
+    const next = milestones.find(m => value < m);
+    return next ? `${next}点` : undefined;
+  }
+
+  /**
+   * 辅助方法：获取能量成就描述
+   */
+  private getEnergyAchievement(energy: number): string {
+    if (energy >= 90) return '精力充沛';
+    if (energy >= 75) return '活力四射';
+    if (energy >= 50) return '精神饱满';
+    if (energy >= 25) return '略显疲惫';
+    return '需要休息';
+  }
+
+  /**
+   * 辅助方法：获取心情成就描述
+   */
+  private getHappinessAchievement(happiness: number): string {
+    if (happiness >= 85) return '心情愉悦';
+    if (happiness >= 60) return '状态良好';
+    if (happiness >= 30) return '情绪平稳';
+    return '心情低落';
+  }
+
+  /**
+   * 辅助方法：获取健康成就描述
+   */
+  private getHealthAchievement(health: number): string {
+    if (health >= 95) return '身体强健';
+    if (health >= 70) return '健康良好';
+    if (health >= 40) return '基本健康';
+    return '需要关注';
+  }
+
+  /**
+   * 辅助方法：确定演化机会类型
+   */
+  private determineOpportunityType(analysisResult: any): 'personality_growth' | 'skill_development' | 'state_improvement' {
+    const hasPersonalityInfluence = Object.keys(analysisResult.personalityInfluences || {}).length > 0;
+    const hasStateInfluence = Object.keys(analysisResult.stateInfluences || {}).length > 0;
+    const hasSkillExperience = (analysisResult.skillExperiences || []).length > 0;
+
+    if (hasPersonalityInfluence) return 'personality_growth';
+    if (hasSkillExperience) return 'skill_development';
+    if (hasStateInfluence) return 'state_improvement';
+    
+    // 默认返回个性成长
+    return 'personality_growth';
+  }
+
+  /**
+   * 辅助方法：生成演化机会
+   */
+  private generateEvolutionOpportunity(
+    type: 'personality_growth' | 'skill_development' | 'state_improvement',
+    _analysisResult: any
+  ): any {
+    const opportunities = {
+      personality_growth: {
+        title: '个性成长机会',
+        description: '通过深入的对话互动，宠物有机会进一步发展其个性特质',
+        requirements: [{ trait: PersonalityTrait.OPENNESS, value: 60 }],
+        reward: {
+          type: '个性强化',
+          description: '显著提升某项个性特质',
+          impact: '永久性个性改变'
+        },
+        difficulty: 'medium' as const,
+        interactionHint: '尝试进行更深层次的哲学或创造性对话'
+      },
+      skill_development: {
+        title: '技能发展契机',
+        description: '当前的学习状态非常适合技能提升，抓住这个机会吧！',
+        requirements: [{ skill: 'communication', value: 50 }],
+        reward: {
+          type: '技能加速',
+          description: '技能经验获取效率翻倍',
+          impact: '加速技能树发展'
+        },
+        difficulty: 'easy' as const,
+        interactionHint: '继续进行相关主题的对话和练习'
+      },
+      state_improvement: {
+        title: '状态提升机会',
+        description: '宠物的状态调整到了最佳范围，适合进行状态强化',
+        requirements: [{ state: 'energy', value: 70 }],
+        reward: {
+          type: '状态增强',
+          description: '获得临时状态加成',
+          impact: '短期内状态衰减减缓'
+        },
+        difficulty: 'hard' as const,
+        interactionHint: '进行高强度的互动活动'
+      }
+    };
+
+    const opportunity = opportunities[type];
+    return {
+      ...opportunity,
+      opportunityType: type,
+      timeLimit: 300, // 5分钟时间限制
     };
   }
 }

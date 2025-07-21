@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PetGateway } from './pet.gateway';
+import { RealtimeEventsService } from './services/realtime-events.service';
 import { PrismaService } from '../common/prisma.service';
 
 @Module({
@@ -10,7 +11,7 @@ import { PrismaService } from '../common/prisma.service';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  providers: [PetGateway, PrismaService],
-  exports: [PetGateway],
+  providers: [PetGateway, RealtimeEventsService, PrismaService],
+  exports: [PetGateway, RealtimeEventsService],
 })
 export class GatewaysModule {}
