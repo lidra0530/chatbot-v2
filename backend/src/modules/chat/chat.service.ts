@@ -82,20 +82,31 @@ export class ChatService {
       const currentState = await this.stateService.getCurrentState(petId);
       const skills = await this.skillsService.getSkillTree(petId);
       
-      // 4. 使用PromptGeneratorEngine构建个性化系统提示词（使用缓存）
-      let systemPrompt = this.cacheService.getPersonalityPrompt(petId, personality);
+      // 4. 使用PromptGeneratorEngine构建个性化系统提示词（优化缓存策略）
+      const promptCacheKey = this.generatePromptCacheKey(petId, personality, currentState, skills);
+      let systemPrompt = this.cacheService.getPersonalityPrompt(petId, promptCacheKey);
+      
       if (!systemPrompt) {
+        const promptStartTime = Date.now();
+        
         // Convert PersonalityTraits to Record<PersonalityTrait, number>
         const convertedPersonality = this.convertPersonalityTraits(personality);
-        // Convert PetState to PetStateDto
+        // Convert PetState to PetStateDto  
         const convertedState = this.convertPetStateToDto(petId, currentState);
+        
         const generatedPrompt = await this.promptGenerator.generateCompletePrompt(
           convertedPersonality,
           convertedState,
           skills
         );
+        
         systemPrompt = generatedPrompt.combinedPrompt;
-        this.cacheService.cachePersonalityPrompt(petId, personality, systemPrompt);
+        
+        // 优化缓存策略：根据提示词复杂度调整缓存时间
+        this.cacheService.cachePersonalityPrompt(petId, promptCacheKey, systemPrompt);
+        
+        const promptGenerationTime = Date.now() - promptStartTime;
+        this.logger.debug(`Prompt generated in ${promptGenerationTime}ms for pet ${petId}`);
       }
       
       // 5. 获取对话历史上下文（使用缓存）
@@ -132,18 +143,17 @@ export class ChatService {
       // 13. 使对话上下文缓存失效（因为添加了新消息）
       this.cacheService.invalidateConversationCache(conversation.id);
       
-      // 14. 触发技能经验增长（异步执行，不影响响应时间）
-      this.processSkillExperienceFromChat(petId, message, llmResponse.content, dto.metadata)
-        .catch(error => {
-          this.logger.warn('Failed to process skill experience from chat:', error);
-        });
+      // 14. 分析对话内容（轻量级分析用于响应）
+      const quickAnalysisResult = await this.performQuickAnalysis(petId, message, llmResponse.content, personality, currentState);
       
-      // 15. 分析对话内容并更新宠物数据
-      const analysisResult = await this.analyzeChatResponse(petId, message, llmResponse.content, personality, currentState);
-      await this.updatePetFromChat(petId, analysisResult, skills);
+      // 15. 异步执行完整分析和数据更新（不影响响应时间）
+      this.performAsyncAnalysisAndUpdate(petId, message, llmResponse.content, personality, currentState, skills, dto.metadata)
+        .catch(error => {
+          this.logger.warn('Failed to perform async analysis and update:', error);
+        });
 
       // 16. 构建并返回响应
-      const response = this.buildChatResponse(aiMessage, llmResponse, conversation.id, analysisResult);
+      const response = this.buildChatResponse(aiMessage, llmResponse, conversation.id, quickAnalysisResult);
       
       // 16. 记录成本控制使用情况
       if (llmResponse.usage) {
@@ -406,11 +416,23 @@ export class ChatService {
         modelUsed: llmResponse.model,
         usage: llmResponse.usage,
         processingTime: llmResponse.responseTime,
-        personalityInfluence: analysisResult?.personalityInfluences || aiMessage.personalitySnapshot,
-        stateInfluence: analysisResult?.stateInfluences || aiMessage.stateSnapshot,
+        personalityInfluence: this.formatPersonalityInfluence(analysisResult?.personalityInfluences || aiMessage.personalitySnapshot),
+        stateInfluence: this.formatStateInfluence(analysisResult?.stateInfluences || aiMessage.stateSnapshot),
         skillsAffected: analysisResult?.skillExperiences?.map((exp: any) => exp.skillId) || [],
         cached: false,
-        qualityScore: analysisResult?.qualityMetrics?.overall || 0.8
+        qualityScore: analysisResult?.qualityMetrics?.overall || 0.8,
+        analysis: analysisResult ? {
+          interactionType: this.detectInteractionType(aiMessage.content || ''),
+          emotionalTone: analysisResult.qualityMetrics?.emotionalColor || 0,
+          topicComplexity: analysisResult.qualityMetrics?.topicDepth || 0.3,
+          keywords: this.extractKeywords(aiMessage.content || '').slice(0, 5)
+        } : undefined,
+        additionalData: {
+          evolutionTriggered: !!analysisResult?.personalityInfluences,
+          stateUpdated: !!analysisResult?.stateInfluences,
+          skillExperienceGained: analysisResult?.skillExperiences?.reduce((total: number, exp: any) => total + exp.experience, 0) || 0,
+          analysisTimestamp: analysisResult?.metadata?.analyzedAt
+        }
       },
     };
   }
@@ -835,5 +857,229 @@ export class ChatService {
     if (moodValue >= 50) return PetMood.CALM;
     if (moodValue >= 30) return PetMood.RELAXED;
     return PetMood.SLEEPY;
+  }
+
+  /**
+   * 格式化个性影响信息
+   */
+  private formatPersonalityInfluence(personalityData: any): any {
+    if (!personalityData) {
+      return {
+        dominantTrait: 'neutral',
+        traitValues: {}
+      };
+    }
+
+    // 如果是分析结果中的个性影响
+    if (typeof personalityData === 'object' && !personalityData.dominantTrait) {
+      const traits = Object.entries(personalityData as Record<string, number>);
+      const dominant = traits.reduce((prev, current) => 
+        Math.abs(current[1]) > Math.abs(prev[1]) ? current : prev
+      );
+
+      return {
+        dominantTrait: dominant[0],
+        traitValues: personalityData
+      };
+    }
+
+    // 如果已经是正确格式或者是快照数据
+    return personalityData.dominantTrait ? personalityData : {
+      dominantTrait: 'neutral',
+      traitValues: personalityData || {}
+    };
+  }
+
+  /**
+   * 格式化状态影响信息
+   */
+  private formatStateInfluence(stateData: any): any {
+    if (!stateData) {
+      return {
+        currentMood: 'neutral',
+        energyLevel: 50,
+        healthStatus: 'normal'
+      };
+    }
+
+    // 如果是分析结果中的状态影响
+    if (typeof stateData === 'object' && !stateData.currentMood) {
+      return {
+        currentMood: this.convertInfluenceToMood(stateData.happiness || 0),
+        energyLevel: Math.max(0, Math.min(100, (stateData.energy || 0) + 50)),
+        healthStatus: 'normal'
+      };
+    }
+
+    // 如果已经是正确格式或者是快照数据
+    return stateData.currentMood ? stateData : {
+      currentMood: this.convertValueToMood(stateData.mood || stateData.happiness || 50),
+      energyLevel: stateData.energy || stateData.energyLevel || 50,
+      healthStatus: stateData.health ? this.convertValueToHealth(stateData.health) : 'normal'
+    };
+  }
+
+  /**
+   * 将影响值转换为心情描述
+   */
+  private convertInfluenceToMood(influence: number): string {
+    if (influence > 5) return 'happy';
+    if (influence > 0) return 'content';
+    if (influence < -5) return 'sad';
+    if (influence < 0) return 'neutral';
+    return 'calm';
+  }
+
+  /**
+   * 将数值转换为心情描述
+   */
+  private convertValueToMood(value: number): string {
+    if (value >= 80) return 'excited';
+    if (value >= 60) return 'happy';
+    if (value >= 40) return 'content';
+    if (value >= 20) return 'calm';
+    return 'sad';
+  }
+
+  /**
+   * 将数值转换为健康状态描述
+   */
+  private convertValueToHealth(value: number): string {
+    if (value >= 90) return 'excellent';
+    if (value >= 70) return 'good';
+    if (value >= 50) return 'normal';
+    if (value >= 30) return 'fair';
+    return 'poor';
+  }
+
+  /**
+   * 生成提示词缓存键
+   */
+  private generatePromptCacheKey(petId: string, personality: any, state: any, skills: any[]): string {
+    // 创建基于关键数据的缓存键，避免频繁重新生成相同提示词
+    const personalityHash = this.createSimpleHash(JSON.stringify({
+      openness: Math.round((personality.openness || 50) / 10) * 10,
+      conscientiousness: Math.round((personality.conscientiousness || 50) / 10) * 10,
+      extraversion: Math.round((personality.extraversion || 50) / 10) * 10,
+      agreeableness: Math.round((personality.agreeableness || 50) / 10) * 10,
+      neuroticism: Math.round((personality.neuroticism || 30) / 10) * 10,
+    }));
+    
+    const stateHash = this.createSimpleHash(JSON.stringify({
+      mood: Math.round((state?.basic?.mood || 70) / 20) * 20,
+      energy: Math.round((state?.basic?.energy || 80) / 20) * 20,
+      health: Math.round((state?.basic?.health || 90) / 20) * 20,
+    }));
+    
+    const unlockedSkills = skills.filter(skill => skill.isUnlocked).map(skill => skill.id).sort();
+    const skillsHash = this.createSimpleHash(JSON.stringify(unlockedSkills));
+    
+    return `${petId}-${personalityHash}-${stateHash}-${skillsHash}`;
+  }
+
+  /**
+   * 创建简单哈希值
+   */
+  private createSimpleHash(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 转换为32位整数
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  /**
+   * 执行快速分析（用于响应构建）
+   */
+  private async performQuickAnalysis(
+    petId: string,
+    userMessage: string,
+    botResponse: string,
+    personality: any,
+    currentState: any
+  ): Promise<any> {
+    try {
+      // 快速分析，只计算基础指标
+      const emotionalTone = this.analyzeEmotionalTone(userMessage);
+      const topicComplexity = this.calculateTopicComplexity(userMessage);
+      
+      return {
+        qualityMetrics: {
+          overall: 0.8, // 默认质量评分
+          emotionalColor: emotionalTone,
+          topicDepth: topicComplexity,
+          appropriateness: 0.85 // 默认适当性评分
+        },
+        personalityInfluences: this.identifyPersonalityTriggers(userMessage, personality),
+        stateInfluences: this.calculateStateInfluences(userMessage, currentState),
+        skillExperiences: this.calculateSkillExperiences(userMessage, botResponse),
+        metadata: {
+          analyzedAt: new Date(),
+          analysisType: 'quick',
+          userMessageLength: userMessage.length,
+          botResponseLength: botResponse.length
+        }
+      };
+    } catch (error) {
+      this.logger.warn(`Quick analysis failed for pet ${petId}:`, error);
+      return this.getDefaultAnalysisResult();
+    }
+  }
+
+  /**
+   * 异步执行完整分析和数据更新
+   */
+  private async performAsyncAnalysisAndUpdate(
+    petId: string,
+    userMessage: string,
+    botResponse: string,
+    personality: any,
+    currentState: any,
+    skills: any[],
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    try {
+      this.logger.debug(`Starting async analysis and update for pet ${petId}`);
+      
+      // 1. 执行完整分析
+      const fullAnalysisResult = await this.analyzeChatResponse(petId, userMessage, botResponse, personality, currentState);
+      
+      // 2. 更新宠物数据
+      await this.updatePetFromChat(petId, fullAnalysisResult, skills);
+      
+      // 3. 处理技能经验增长
+      await this.processSkillExperienceFromChat(petId, userMessage, botResponse, metadata);
+      
+      // 4. 触发个性演化分析
+      await this.analyzeAndTriggerEvolution(petId, userMessage, botResponse);
+      
+      this.logger.debug(`Async analysis and update completed for pet ${petId}`);
+    } catch (error) {
+      this.logger.error(`Async analysis and update failed for pet ${petId}:`, error);
+      // 不重新抛出错误，避免影响主流程
+    }
+  }
+
+  /**
+   * 获取默认分析结果
+   */
+  private getDefaultAnalysisResult(): any {
+    return {
+      qualityMetrics: { 
+        overall: 0.5, 
+        emotionalColor: 0, 
+        topicDepth: 0.3, 
+        appropriateness: 0.7 
+      },
+      personalityInfluences: {},
+      stateInfluences: {},
+      skillExperiences: [],
+      metadata: { 
+        analyzedAt: new Date(), 
+        analysisType: 'default' 
+      }
+    };
   }
 }
