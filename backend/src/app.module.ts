@@ -11,6 +11,7 @@ import { PersonalityModule } from './modules/personality/personality.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { StateModule } from './modules/state/state.module';
 import { TasksModule } from './tasks/tasks.module';
+import { GatewaysModule } from './gateways/gateways.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -24,6 +25,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     SkillsModule,
     StateModule,
     TasksModule,
+    GatewaysModule,
   ],
   controllers: [AppController],
   providers: [
