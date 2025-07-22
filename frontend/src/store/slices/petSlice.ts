@@ -506,7 +506,7 @@ export const petSlice = createSlice({
       )
       .addMatcher(
         (action) => action.type.endsWith('/rejected') && action.type.startsWith('pet/'),
-        (state, action) => {
+        (state, action: any) => {
           state.isLoading = false;
           state.isLoadingDetails = false;
           state.error = action.payload as string || 'An error occurred';
