@@ -72,7 +72,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh', width: '100vw' }}>
       <Sider trigger={null} collapsible collapsed={collapsed} theme="light">
         <div style={{ 
           height: 32, 

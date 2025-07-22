@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Form, 
-  Input, 
-  Switch, 
-  Button, 
-  Space, 
-  Typography, 
+import {
+  Card,
+  Row,
+  Col,
+  Form,
+  Input,
+  Switch,
+  Button,
+  Space,
+  Typography,
   Select,
   Slider,
   message,
   Modal,
-  Alert
+  Alert,
 } from 'antd';
-import { 
+import {
   UserOutlined,
   BellOutlined,
   SecurityScanOutlined,
   DeleteOutlined,
   ExportOutlined,
-  ImportOutlined
+  ImportOutlined,
 } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
@@ -56,7 +56,7 @@ interface UserSettings {
 const SettingsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  
+
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -91,11 +91,14 @@ const SettingsPage: React.FC = () => {
       // TODO: 实现更新用户信息API
       message.success('设置保存成功！');
       // 这里可以保存其他偏好设置到localStorage或后端
-      localStorage.setItem('userPreferences', JSON.stringify({
-        notifications: values.notifications,
-        privacy: values.privacy,
-        preferences: values.preferences,
-      }));
+      localStorage.setItem(
+        'userPreferences',
+        JSON.stringify({
+          notifications: values.notifications,
+          privacy: values.privacy,
+          preferences: values.preferences,
+        })
+      );
     } catch (error) {
       message.error('保存失败，请重试');
     } finally {
@@ -127,11 +130,11 @@ const SettingsPage: React.FC = () => {
       settings: form.getFieldsValue(),
       exportDate: new Date().toISOString(),
     };
-    
+
     const dataStr = JSON.stringify(userData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = `chatbot-data-${new Date().toISOString().split('T')[0]}.json`;
@@ -139,7 +142,7 @@ const SettingsPage: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     message.success('数据导出成功');
   };
 
@@ -158,7 +161,7 @@ const SettingsPage: React.FC = () => {
           onFinish={handleSaveSettings}
         >
           {/* 个人信息 */}
-          <Card 
+          <Card
             title={
               <Space>
                 <UserOutlined />
@@ -174,7 +177,7 @@ const SettingsPage: React.FC = () => {
                   label="显示名称"
                   rules={[
                     { required: true, message: '请输入显示名称' },
-                    { max: 50, message: '名称不能超过50个字符' }
+                    { max: 50, message: '名称不能超过50个字符' },
                   ]}
                 >
                   <Input placeholder="输入显示名称" />
@@ -186,17 +189,14 @@ const SettingsPage: React.FC = () => {
                   label="邮箱地址"
                   rules={[
                     { required: true, message: '请输入邮箱地址' },
-                    { type: 'email', message: '请输入有效的邮箱地址' }
+                    { type: 'email', message: '请输入有效的邮箱地址' },
                   ]}
                 >
                   <Input placeholder="输入邮箱地址" disabled />
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item
-              name="bio"
-              label="个人简介"
-            >
+            <Form.Item name="bio" label="个人简介">
               <Input.TextArea
                 placeholder="介绍一下自己（可选）"
                 rows={3}
@@ -207,7 +207,7 @@ const SettingsPage: React.FC = () => {
           </Card>
 
           {/* 通知设置 */}
-          <Card 
+          <Card
             title={
               <Space>
                 <BellOutlined />
@@ -216,8 +216,17 @@ const SettingsPage: React.FC = () => {
             }
             style={{ marginBottom: 24 }}
           >
-            <Form.Item name={['notifications', 'petUpdates']} valuePropName="checked">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Form.Item
+              name={['notifications', 'petUpdates']}
+              valuePropName="checked"
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
                   <div>宠物状态更新</div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
@@ -227,9 +236,18 @@ const SettingsPage: React.FC = () => {
                 <Switch />
               </div>
             </Form.Item>
-            
-            <Form.Item name={['notifications', 'systemMessages']} valuePropName="checked">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+            <Form.Item
+              name={['notifications', 'systemMessages']}
+              valuePropName="checked"
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
                   <div>系统消息</div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
@@ -239,9 +257,18 @@ const SettingsPage: React.FC = () => {
                 <Switch />
               </div>
             </Form.Item>
-            
-            <Form.Item name={['notifications', 'emailNotifications']} valuePropName="checked">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+            <Form.Item
+              name={['notifications', 'emailNotifications']}
+              valuePropName="checked"
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
                   <div>邮件通知</div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
@@ -254,7 +281,7 @@ const SettingsPage: React.FC = () => {
           </Card>
 
           {/* 隐私设置 */}
-          <Card 
+          <Card
             title={
               <Space>
                 <SecurityScanOutlined />
@@ -263,15 +290,27 @@ const SettingsPage: React.FC = () => {
             }
             style={{ marginBottom: 24 }}
           >
-            <Form.Item name={['privacy', 'profileVisibility']} label="个人资料可见性">
+            <Form.Item
+              name={['privacy', 'profileVisibility']}
+              label="个人资料可见性"
+            >
               <Select>
                 <Option value="public">公开</Option>
                 <Option value="private">仅自己可见</Option>
               </Select>
             </Form.Item>
-            
-            <Form.Item name={['privacy', 'dataCollection']} valuePropName="checked">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+            <Form.Item
+              name={['privacy', 'dataCollection']}
+              valuePropName="checked"
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
                   <div>数据收集与分析</div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
@@ -304,7 +343,7 @@ const SettingsPage: React.FC = () => {
                 </Form.Item>
               </Col>
             </Row>
-            
+
             <Form.Item name={['preferences', 'chatSpeed']} label="对话速度">
               <Slider
                 min={10}
@@ -312,13 +351,22 @@ const SettingsPage: React.FC = () => {
                 marks={{
                   10: '慢',
                   50: '中等',
-                  100: '快'
+                  100: '快',
                 }}
               />
             </Form.Item>
-            
-            <Form.Item name={['preferences', 'autoSave']} valuePropName="checked">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+            <Form.Item
+              name={['preferences', 'autoSave']}
+              valuePropName="checked"
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
                   <div>自动保存对话</div>
                   <Text type="secondary" style={{ fontSize: 12 }}>
@@ -341,7 +389,7 @@ const SettingsPage: React.FC = () => {
                   下载包含个人信息和宠物数据的JSON文件
                 </Text>
               </div>
-              
+
               <div>
                 <Button icon={<ImportOutlined />} disabled>
                   导入数据
@@ -362,8 +410,8 @@ const SettingsPage: React.FC = () => {
               showIcon
               style={{ marginBottom: 16 }}
             />
-            <Button 
-              danger 
+            <Button
+              danger
               icon={<DeleteOutlined />}
               onClick={() => setDeleteModalVisible(true)}
             >
@@ -374,9 +422,7 @@ const SettingsPage: React.FC = () => {
           {/* 保存按钮 */}
           <div style={{ textAlign: 'center' }}>
             <Space size="large">
-              <Button onClick={() => form.resetFields()}>
-                重置
-              </Button>
+              <Button onClick={() => form.resetFields()}>重置</Button>
               <Button type="primary" htmlType="submit" loading={loading}>
                 保存设置
               </Button>
@@ -408,7 +454,7 @@ const SettingsPage: React.FC = () => {
           <Input
             placeholder={user?.email}
             value={deleteConfirmText}
-            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            onChange={e => setDeleteConfirmText(e.target.value)}
             style={{ marginTop: 8 }}
           />
         </Modal>

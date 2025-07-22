@@ -1,12 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Row, Col, Card, Space, Typography, Avatar, Tag, Button, Spin, message } from 'antd';
-import { 
-  ArrowLeftOutlined, 
-  RobotOutlined, 
+import {
+  Row,
+  Col,
+  Card,
+  Space,
+  Typography,
+  Avatar,
+  Tag,
+  Button,
+  Spin,
+  message,
+} from 'antd';
+import {
+  ArrowLeftOutlined,
+  RobotOutlined,
   SettingOutlined,
   TrophyOutlined,
-  HeartOutlined
+  HeartOutlined,
 } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
@@ -21,8 +32,10 @@ const ChatPage: React.FC = () => {
   const { petId } = useParams<{ petId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  
-  const { currentPet, isLoading } = useSelector((state: RootState) => state.pet);
+
+  const { currentPet, isLoading } = useSelector(
+    (state: RootState) => state.pet
+  );
   const [chatHeight, setChatHeight] = useState(600);
 
   useEffect(() => {
@@ -38,7 +51,8 @@ const ChatPage: React.FC = () => {
       const headerHeight = 64; // MainLayout header高度
       const padding = 48; // 上下padding
       const petInfoHeight = 120; // 宠物信息区域高度
-      const calculatedHeight = windowHeight - headerHeight - padding - petInfoHeight;
+      const calculatedHeight =
+        windowHeight - headerHeight - padding - petInfoHeight;
       setChatHeight(Math.max(400, calculatedHeight));
     };
 
@@ -50,12 +64,14 @@ const ChatPage: React.FC = () => {
   if (isLoading || !currentPet) {
     return (
       <MainLayout>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '50vh' 
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '50vh',
+          }}
+        >
           <Spin size="large" />
         </div>
       </MainLayout>
@@ -76,21 +92,26 @@ const ChatPage: React.FC = () => {
           <Row justify="space-between" align="middle">
             <Col>
               <Space size="large">
-                <Button 
+                <Button
                   icon={<ArrowLeftOutlined />}
                   onClick={() => navigate('/pets')}
                 >
                   返回
                 </Button>
-                
+
                 <Space size="middle">
-                  <Avatar 
+                  <Avatar
                     size={48}
                     icon={<RobotOutlined />}
-                    style={{ 
-                      backgroundColor: currentPet.personality?.openness > 0.7 ? '#52c41a' :
-                                       currentPet.personality?.extraversion > 0.7 ? '#1677ff' :
-                                       currentPet.personality?.conscientiousness > 0.7 ? '#722ed1' : '#faad14'
+                    style={{
+                      backgroundColor:
+                        currentPet.personality?.openness > 0.7
+                          ? '#52c41a'
+                          : currentPet.personality?.extraversion > 0.7
+                            ? '#1677ff'
+                            : currentPet.personality?.conscientiousness > 0.7
+                              ? '#722ed1'
+                              : '#faad14',
                     }}
                   />
                   <div>
@@ -104,30 +125,28 @@ const ChatPage: React.FC = () => {
                       <Tag color="blue">
                         Lv.{currentPet.evolutionLevel || 1}
                       </Tag>
-                      <Tag color="green">
-                        愉快
-                      </Tag>
+                      <Tag color="green">愉快</Tag>
                     </Space>
                   </div>
                 </Space>
               </Space>
             </Col>
-            
+
             <Col>
               <Space>
-                <Button 
+                <Button
                   icon={<TrophyOutlined />}
                   onClick={() => navigate(`/pets/${petId}/skills`)}
                 >
                   技能树
                 </Button>
-                <Button 
+                <Button
                   icon={<HeartOutlined />}
                   onClick={() => navigate(`/pets/${petId}/personality`)}
                 >
                   个性分析
                 </Button>
-                <Button 
+                <Button
                   icon={<SettingOutlined />}
                   onClick={() => navigate(`/pets/${petId}/settings`)}
                 >
@@ -145,52 +164,103 @@ const ChatPage: React.FC = () => {
               <ChatInterface petId={petId} />
             </div>
           </Col>
-          
+
           {/* 右侧信息面板 */}
           <Col xs={24} lg={6}>
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               {/* 宠物状态 */}
               <Card title="当前状态" size="small">
-                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Space
+                  direction="vertical"
+                  size="small"
+                  style={{ width: '100%' }}
+                >
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>心情</Text>
-                    <Tag color="green">
-                      愉快
-                    </Tag>
+                    <Tag color="green">愉快</Tag>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>能量</Text>
-                    <Text strong>{Math.round((currentPet.state?.energy || 0.8) * 100)}%</Text>
+                    <Text strong>
+                      {Math.round((currentPet.state?.energy || 0.8) * 100)}%
+                    </Text>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>满足度</Text>
-                    <Text strong>{Math.round((currentPet.state?.happiness || 0.75) * 100)}%</Text>
+                    <Text strong>
+                      {Math.round((currentPet.state?.happiness || 0.75) * 100)}%
+                    </Text>
                   </div>
                 </Space>
               </Card>
 
               {/* 个性特征 */}
               <Card title="个性特征" size="small">
-                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Space
+                  direction="vertical"
+                  size="small"
+                  style={{ width: '100%' }}
+                >
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>开放性</Text>
-                    <Text strong>{Math.round((currentPet.personality?.openness || 0.5) * 100)}%</Text>
+                    <Text strong>
+                      {Math.round(
+                        (currentPet.personality?.openness || 0.5) * 100
+                      )}
+                      %
+                    </Text>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>外向性</Text>
-                    <Text strong>{Math.round((currentPet.personality?.extraversion || 0.5) * 100)}%</Text>
+                    <Text strong>
+                      {Math.round(
+                        (currentPet.personality?.extraversion || 0.5) * 100
+                      )}
+                      %
+                    </Text>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>责任心</Text>
-                    <Text strong>{Math.round((currentPet.personality?.conscientiousness || 0.5) * 100)}%</Text>
+                    <Text strong>
+                      {Math.round(
+                        (currentPet.personality?.conscientiousness || 0.5) * 100
+                      )}
+                      %
+                    </Text>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>宜人性</Text>
-                    <Text strong>{Math.round((currentPet.personality?.agreeableness || 0.5) * 100)}%</Text>
+                    <Text strong>
+                      {Math.round(
+                        (currentPet.personality?.agreeableness || 0.5) * 100
+                      )}
+                      %
+                    </Text>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
                     <Text>神经质</Text>
-                    <Text strong>{Math.round((currentPet.personality?.neuroticism || 0.5) * 100)}%</Text>
+                    <Text strong>
+                      {Math.round(
+                        (currentPet.personality?.neuroticism || 0.5) * 100
+                      )}
+                      %
+                    </Text>
                   </div>
                 </Space>
               </Card>

@@ -18,10 +18,17 @@ export interface ApiError {
   code?: string;
 }
 
+// Enhanced API client with retry mechanism, caching, and error handling
 class ApiClient {
   private baseUrl: string;
   private timeout: number;
   private apiVersion: ApiVersion;
+  private cache: Map<string, { data: any; timestamp: number; ttl: number }>;
+  private retryConfig: {
+    maxRetries: number;
+    retryDelay: number;
+    retryableStatus: number[];
+  };
 
   constructor() {
     this.baseUrl = import.meta.env['VITE_API_BASE_URL'] || 'http://localhost:3000';
@@ -29,6 +36,14 @@ class ApiClient {
     
     const envVersion = import.meta.env['VITE_API_VERSION'] || DEFAULT_API_VERSION;
     this.apiVersion = isApiVersionSupported(envVersion) ? envVersion : DEFAULT_API_VERSION;
+    
+    // Initialize cache and retry configuration
+    this.cache = new Map();
+    this.retryConfig = {
+      maxRetries: 3,
+      retryDelay: 1000, // 1 second
+      retryableStatus: [408, 429, 500, 502, 503, 504], // Retryable HTTP status codes
+    };
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -86,18 +101,76 @@ class ApiClient {
     return `${this.baseUrl}/api/${this.apiVersion}${endpoint}`;
   }
 
+  // Cache management methods
+  private getCacheKey(method: string, url: string, data?: any): string {
+    return `${method}:${url}:${data ? JSON.stringify(data) : ''}`;
+  }
+
+  private getFromCache<T>(cacheKey: string): ApiResponse<T> | null {
+    const cached = this.cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
+      return cached.data;
+    }
+    if (cached) {
+      this.cache.delete(cacheKey);
+    }
+    return null;
+  }
+
+  private setCache<T>(cacheKey: string, data: ApiResponse<T>, ttl: number = 5 * 60 * 1000): void {
+    this.cache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+      ttl,
+    });
+  }
+
+  // Retry mechanism with exponential backoff
+  private async retryRequest(
+    requestFn: () => Promise<Response>,
+    attempt: number = 0
+  ): Promise<Response> {
+    try {
+      return await requestFn();
+    } catch (error: any) {
+      if (attempt >= this.retryConfig.maxRetries) {
+        throw error;
+      }
+
+      if (error.status && this.retryConfig.retryableStatus.includes(error.status)) {
+        const delay = this.retryConfig.retryDelay * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.retryRequest(requestFn, attempt + 1);
+      }
+
+      throw error;
+    }
+  }
+
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    cacheOptions?: { enabled?: boolean; ttl?: number }
   ): Promise<ApiResponse<T>> {
     const url = this.buildApiUrl(endpoint);
     const headers = this.getAuthHeaders();
 
+    // Check cache for GET requests
+    const isGetRequest = (options.method || 'GET').toUpperCase() === 'GET';
+    const cacheKey = this.getCacheKey(options.method || 'GET', url, options.body);
+    
+    if (isGetRequest && cacheOptions?.enabled !== false) {
+      const cached = this.getFromCache<T>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-    try {
-      const response = await fetch(url, {
+    const requestFn = async () => {
+      return fetch(url, {
         ...options,
         headers: {
           ...headers,
@@ -105,9 +178,20 @@ class ApiClient {
         },
         signal: controller.signal,
       });
+    };
 
+    try {
+      const response = await this.retryRequest(requestFn);
       clearTimeout(timeoutId);
-      return await this.handleResponse<T>(response);
+      
+      const result = await this.handleResponse<T>(response);
+
+      // Cache successful GET responses
+      if (isGetRequest && result.success && cacheOptions?.enabled !== false) {
+        this.setCache(cacheKey, result, cacheOptions?.ttl);
+      }
+
+      return result;
     } catch (error: unknown) {
       clearTimeout(timeoutId);
       
@@ -131,10 +215,10 @@ class ApiClient {
     }
   }
 
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string, cacheOptions?: { enabled?: boolean; ttl?: number }): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
       method: 'GET',
-    });
+    }, cacheOptions);
   }
 
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
@@ -184,6 +268,53 @@ class ApiClient {
   getApiVersion(): ApiVersion {
     return this.apiVersion;
   }
+
+  // Cache management methods
+  clearCache(pattern?: string): void {
+    if (!pattern) {
+      this.cache.clear();
+      return;
+    }
+
+    for (const [key] of this.cache) {
+      if (key.includes(pattern)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  getCacheSize(): number {
+    return this.cache.size;
+  }
+
+  getCacheStats(): {
+    size: number;
+    keys: string[];
+    totalMemory: number;
+  } {
+    const keys = Array.from(this.cache.keys());
+    let totalMemory = 0;
+    
+    for (const [, value] of this.cache) {
+      totalMemory += JSON.stringify(value).length;
+    }
+
+    return {
+      size: this.cache.size,
+      keys,
+      totalMemory,
+    };
+  }
+
+  // Network status methods
+  async checkHealth(): Promise<boolean> {
+    try {
+      const response = await this.get<{ status: string }>('/health', { enabled: false });
+      return response.success && response.data.status === 'ok';
+    } catch {
+      return false;
+    }
+  }
 }
 
 function createApiError(error: { message: string; status: number; code?: string }): Error {
@@ -219,6 +350,9 @@ export const petApi = {
   getPets: () =>
     apiClient.get<any[]>('/pets'),
   
+  getPetsList: () =>
+    apiClient.get<any[]>('/pets/list'),
+  
   createPet: (data: { name: string; species: string }) =>
     apiClient.post<any>('/pets', data),
   
@@ -235,7 +369,23 @@ export const petApi = {
     apiClient.get<any>(`/pets/${petId}/state`),
   
   updatePetState: (petId: string, state: any) =>
-    apiClient.put<any>(`/pets/${petId}/state`, state)
+    apiClient.put<any>(`/pets/${petId}/state`, state),
+  
+  // Enhanced API methods for complete pet data
+  getPersonalityAnalysis: (petId: string) =>
+    apiClient.get<any>(`/pets/${petId}/personality/analysis`),
+  
+  getStateAnalysis: (petId: string) =>
+    apiClient.get<any>(`/pets/${petId}/state/analysis`),
+  
+  getSkillStatistics: (petId: string) =>
+    apiClient.get<any>(`/pets/${petId}/skills/statistics`),
+  
+  getPetStatistics: (petId: string) =>
+    apiClient.get<any>(`/pets/${petId}/statistics`),
+  
+  comparePets: (petIds: string[]) =>
+    apiClient.post<any>('/pets/compare', { petIds })
 };
 
 // Conversation API calls

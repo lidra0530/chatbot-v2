@@ -8,19 +8,26 @@ const { Title, Text } = Typography;
 
 const LoginPage: React.FC = () => {
   return (
-    <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-      <Content style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '20px'
-      }}>
-        <Card 
-          style={{ 
+    <Layout
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      }}
+    >
+      <Content
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px',
+        }}
+      >
+        <Card
+          style={{
             width: '100%',
             maxWidth: 400,
             borderRadius: 16,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
           }}
           styles={{ body: { padding: '40px 32px' } }}
         >
@@ -32,9 +39,7 @@ const LoginPage: React.FC = () => {
                 <Title level={2} style={{ margin: 0, color: '#262626' }}>
                   智能宠物助手
                 </Title>
-                <Text type="secondary">
-                  欢迎来到个性化AI宠物世界
-                </Text>
+                <Text type="secondary">欢迎来到个性化AI宠物世界</Text>
               </Space>
             </div>
 
@@ -44,7 +49,7 @@ const LoginPage: React.FC = () => {
             {/* 底部提示 */}
             <div style={{ textAlign: 'center' }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                还没有账户？ 
+                还没有账户？
                 <a href="/register" style={{ marginLeft: 4 }}>
                   立即注册
                 </a>
