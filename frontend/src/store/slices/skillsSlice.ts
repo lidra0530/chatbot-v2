@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { skillsApi } from '../../services/api';
 
 export interface Skill {
   id: string;
@@ -70,121 +71,60 @@ const initialState: SkillsState = {
 
 export const fetchSkillTreeAsync = createAsyncThunk(
   'skills/fetchSkillTree',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/skills/${petId}`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch skill tree');
-      }
-
-      const skillTree: SkillTree = await response.json();
-      return skillTree;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch skill tree');
+      const response = await skillsApi.getSkillTree(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch skill tree');
     }
   }
 );
 
 export const fetchAvailableSkillsAsync = createAsyncThunk(
   'skills/fetchAvailableSkills',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/skills/${petId}/available`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch available skills');
-      }
-
-      const skills: Skill[] = await response.json();
-      return skills;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch available skills');
+      const response = await skillsApi.getAvailableSkills(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch available skills');
     }
   }
 );
 
 export const unlockSkillAsync = createAsyncThunk(
   'skills/unlockSkill',
-  async ({ petId, skillId }: { petId: string; skillId: string }, { rejectWithValue, getState }) => {
+  async ({ petId, skillId }: { petId: string; skillId: string }, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/skills/${petId}/unlock`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify({ skillId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to unlock skill');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to unlock skill');
+      const response = await skillsApi.unlockSkill(petId, skillId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to unlock skill');
     }
   }
 );
 
 export const fetchCurrentAbilitiesAsync = createAsyncThunk(
   'skills/fetchCurrentAbilities',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/skills/${petId}/abilities`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch current abilities');
-      }
-
-      const abilities: string[] = await response.json();
-      return abilities;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch current abilities');
+      const response = await skillsApi.getCurrentAbilities(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch current abilities');
     }
   }
 );
 
 export const addExperienceAsync = createAsyncThunk(
   'skills/addExperience',
-  async ({ petId, skillId, amount }: { petId: string; skillId: string; amount: number }, { rejectWithValue, getState }) => {
+  async ({ petId, skillId, amount }: { petId: string; skillId: string; amount: number }, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/skills/${petId}/experience`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify({ skillId, amount }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add experience');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to add experience');
+      const response = await skillsApi.addExperience(petId, skillId, amount);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to add experience');
     }
   }
 );

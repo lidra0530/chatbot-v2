@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { stateApi } from '../../services/api';
 
 export interface PetState {
   health: number;
@@ -62,144 +63,72 @@ const initialState: StateSliceState = {
 
 export const fetchCurrentStateAsync = createAsyncThunk(
   'state/fetchCurrentState',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/state/${petId}`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch pet state');
-      }
-
-      const data: PetState = await response.json();
-      return { petId, state: data };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch pet state');
+      const response = await stateApi.getCurrentState(petId);
+      return { petId, state: response.data };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch pet state');
     }
   }
 );
 
 export const updatePetStateAsync = createAsyncThunk(
   'state/updatePetState',
-  async ({ petId, stateUpdate }: { petId: string; stateUpdate: Partial<PetState> }, { rejectWithValue, getState }) => {
+  async ({ petId, stateUpdate }: { petId: string; stateUpdate: Partial<PetState> }, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/state/${petId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify(stateUpdate),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update pet state');
-      }
-
-      const updatedState: PetState = await response.json();
-      return { petId, state: updatedState };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update pet state');
+      const response = await stateApi.updateState(petId, stateUpdate);
+      return { petId, state: response.data };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update pet state');
     }
   }
 );
 
 export const processStateInteractionAsync = createAsyncThunk(
   'state/processStateInteraction',
-  async ({ petId, interactionType, intensity }: { petId: string; interactionType: string; intensity: number }, { rejectWithValue, getState }) => {
+  async ({ petId, interactionType, intensity }: { petId: string; interactionType: string; intensity: number }, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/state/${petId}/interact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify({ interactionType, intensity }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process state interaction');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to process state interaction');
+      const response = await stateApi.processInteraction(petId, interactionType, intensity);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to process state interaction');
     }
   }
 );
 
 export const fetchStateHistoryAsync = createAsyncThunk(
   'state/fetchStateHistory',
-  async ({ petId, limit = 50 }: { petId: string; limit?: number }, { rejectWithValue, getState }) => {
+  async ({ petId, limit = 50 }: { petId: string; limit?: number }, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/state/${petId}/history?limit=${limit}`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch state history');
-      }
-
-      const history: StateHistory[] = await response.json();
-      return history;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch state history');
+      const response = await stateApi.getStateHistory(petId, limit);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch state history');
     }
   }
 );
 
 export const fetchStateMilestonesAsync = createAsyncThunk(
   'state/fetchStateMilestones',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/state/${petId}/milestones`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch state milestones');
-      }
-
-      const milestones: StateMilestone[] = await response.json();
-      return milestones;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch state milestones');
+      const response = await stateApi.getStateMilestones(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch state milestones');
     }
   }
 );
 
 export const fetchStateAnalyticsAsync = createAsyncThunk(
   'state/fetchStateAnalytics',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/state/${petId}/analytics`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch state analytics');
-      }
-
-      const analytics: StateAnalytics = await response.json();
-      return analytics;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch state analytics');
+      const response = await stateApi.getStateAnalytics(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch state analytics');
     }
   }
 );

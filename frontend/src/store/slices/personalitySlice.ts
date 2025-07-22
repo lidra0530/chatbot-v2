@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { personalityApi } from '../../services/api';
 
 export interface PersonalityTraits {
   openness: number;
@@ -49,120 +50,60 @@ const initialState: PersonalityState = {
 
 export const fetchPersonalityAsync = createAsyncThunk(
   'personality/fetchPersonality',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/personality/${petId}`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch personality data');
-      }
-
-      const data: PersonalityTraits = await response.json();
-      return { petId, traits: data };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch personality data');
+      const response = await personalityApi.getPersonality(petId);
+      return { petId, traits: response.data };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch personality data');
     }
   }
 );
 
 export const fetchEvolutionHistoryAsync = createAsyncThunk(
   'personality/fetchEvolutionHistory',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/personality/${petId}/evolution`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch evolution history');
-      }
-
-      const history: PersonalityEvolution[] = await response.json();
-      return history;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch evolution history');
+      const response = await personalityApi.getEvolutionHistory(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch evolution history');
     }
   }
 );
 
 export const fetchPersonalityAnalyticsAsync = createAsyncThunk(
   'personality/fetchAnalytics',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/personality/${petId}/analytics`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch personality analytics');
-      }
-
-      const analytics: PersonalityAnalytics = await response.json();
-      return analytics;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch personality analytics');
+      const response = await personalityApi.getPersonalityAnalytics(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch personality analytics');
     }
   }
 );
 
 export const triggerEvolutionAsync = createAsyncThunk(
   'personality/triggerEvolution',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/personality/${petId}/trigger-evolution`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to trigger personality evolution');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to trigger personality evolution');
+      const response = await personalityApi.triggerEvolution(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to trigger personality evolution');
     }
   }
 );
 
 export const updateEvolutionSettingsAsync = createAsyncThunk(
   'personality/updateEvolutionSettings',
-  async ({ petId, settings }: { petId: string; settings: Record<string, any> }, { rejectWithValue, getState }) => {
+  async ({ petId, settings }: { petId: string; settings: Record<string, any> }, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/personality/${petId}/evolution-settings`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify(settings),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update evolution settings');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update evolution settings');
+      const response = await personalityApi.updateEvolutionSettings(petId, settings);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update evolution settings');
     }
   }
 );
