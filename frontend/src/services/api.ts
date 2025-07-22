@@ -162,5 +162,71 @@ function createApiError(error: { message: string; status: number; code?: string 
   return err;
 }
 
+// Authentication API calls
+export const authApi = {
+  login: (email: string, password: string) =>
+    apiClient.post<{token: string; user: any}>('/api/auth/login', { email, password }),
+  
+  register: (email: string, password: string, displayName: string) =>
+    apiClient.post<{token: string; user: any}>('/api/auth/register', { email, password, displayName }),
+  
+  logout: () =>
+    apiClient.post('/api/auth/logout'),
+  
+  refreshToken: () =>
+    apiClient.post<{token: string}>('/api/auth/refresh'),
+  
+  getProfile: () =>
+    apiClient.get<any>('/api/auth/profile'),
+  
+  updateProfile: (data: { displayName?: string; bio?: string }) =>
+    apiClient.put<any>('/api/auth/profile', data)
+};
+
+// Pet management API calls
+export const petApi = {
+  getPets: () =>
+    apiClient.get<any[]>('/api/pets'),
+  
+  createPet: (data: { name: string; species: string }) =>
+    apiClient.post<any>('/api/pets', data),
+  
+  getPetById: (petId: string) =>
+    apiClient.get<any>(`/api/pets/${petId}`),
+  
+  updatePet: (petId: string, data: any) =>
+    apiClient.put<any>(`/api/pets/${petId}`, data),
+  
+  deletePet: (petId: string) =>
+    apiClient.delete(`/api/pets/${petId}`),
+  
+  getPetState: (petId: string) =>
+    apiClient.get<any>(`/api/pets/${petId}/state`),
+  
+  updatePetState: (petId: string, state: any) =>
+    apiClient.put<any>(`/api/pets/${petId}/state`, state)
+};
+
+// Conversation API calls
+export const chatApi = {
+  getConversations: (petId?: string) =>
+    apiClient.get<any[]>(`/api/conversations${petId ? `?petId=${petId}` : ''}`),
+  
+  createConversation: (petId: string) =>
+    apiClient.post<any>('/api/conversations', { petId }),
+  
+  getConversationById: (conversationId: string) =>
+    apiClient.get<any>(`/api/conversations/${conversationId}`),
+  
+  getConversationMessages: (conversationId: string) =>
+    apiClient.get<any>(`/api/conversations/${conversationId}/messages`),
+  
+  sendMessage: (data: { petId: string; message: string; conversationId?: string }) =>
+    apiClient.post<any>('/api/chat/completion', data),
+  
+  deleteConversation: (conversationId: string) =>
+    apiClient.delete(`/api/conversations/${conversationId}`)
+};
+
 export const apiClient = new ApiClient();
 export default apiClient;
