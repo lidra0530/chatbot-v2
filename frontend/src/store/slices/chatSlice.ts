@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { chatApi } from '../../services/api';
 
 export interface Message {
   id: string;
@@ -48,113 +49,58 @@ interface SendMessageRequest {
   conversationId?: string;
 }
 
-interface ChatCompletionResponse {
-  id: string;
-  message: Message;
-  conversationId: string;
-  personalityUpdate?: Record<string, number>;
-  stateUpdate?: Record<string, number>;
-  skillsUpdate?: string[];
-}
 
 export const fetchConversationsAsync = createAsyncThunk(
   'chat/fetchConversations',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/conversations?petId=${petId}`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch conversations');
-      }
-
-      const conversations: Conversation[] = await response.json();
-      return conversations;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch conversations');
+      const response = await chatApi.getConversations(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch conversations');
     }
   }
 );
 
 export const sendMessageAsync = createAsyncThunk(
   'chat/sendMessage',
-  async (messageData: SendMessageRequest, { rejectWithValue, getState }) => {
+  async (messageData: SendMessageRequest, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch('/api/chat/completion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify({
-          petId: messageData.petId,
-          message: messageData.content,
-          conversationId: messageData.conversationId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
+      const requestData: { petId: string; message: string; conversationId?: string } = {
+        petId: messageData.petId,
+        message: messageData.content,
+      };
+      if (messageData.conversationId) {
+        requestData.conversationId = messageData.conversationId;
       }
-
-      const result: ChatCompletionResponse = await response.json();
-      return result;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to send message');
+      const response = await chatApi.sendMessage(requestData);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to send message');
     }
   }
 );
 
 export const createConversationAsync = createAsyncThunk(
   'chat/createConversation',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch('/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify({ petId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create conversation');
-      }
-
-      const conversation: Conversation = await response.json();
-      return conversation;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to create conversation');
+      const response = await chatApi.createConversation(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to create conversation');
     }
   }
 );
 
 export const fetchConversationMessagesAsync = createAsyncThunk(
   'chat/fetchConversationMessages',
-  async (conversationId: string, { rejectWithValue, getState }) => {
+  async (conversationId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/conversations/${conversationId}/messages`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch conversation messages');
-      }
-
-      const conversation: Conversation = await response.json();
-      return conversation;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch conversation messages');
+      const response = await chatApi.getConversationMessages(conversationId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch conversation messages');
     }
   }
 );

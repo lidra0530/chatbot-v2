@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { petApi, stateApi } from '../../services/api';
 
 export interface PersonalityTraits {
   openness: number;
@@ -62,98 +63,48 @@ interface CreatePetData {
 
 export const fetchPetsAsync = createAsyncThunk(
   'pet/fetchPets',
-  async (_, { rejectWithValue, getState }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch('/api/pets', {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch pets');
-      }
-
-      const pets: Pet[] = await response.json();
-      return pets;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch pets');
+      const response = await petApi.getPets();
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch pets');
     }
   }
 );
 
 export const createPetAsync = createAsyncThunk(
   'pet/createPet',
-  async (petData: CreatePetData, { rejectWithValue, getState }) => {
+  async (petData: CreatePetData, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch('/api/pets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify(petData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create pet');
-      }
-
-      const pet: Pet = await response.json();
-      return pet;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to create pet');
+      const response = await petApi.createPet(petData);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to create pet');
     }
   }
 );
 
 export const fetchPetDetailsAsync = createAsyncThunk(
   'pet/fetchPetDetails',
-  async (petId: string, { rejectWithValue, getState }) => {
+  async (petId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/pets/${petId}`, {
-        headers: {
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch pet details');
-      }
-
-      const pet: Pet = await response.json();
-      return pet;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch pet details');
+      const response = await petApi.getPetById(petId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch pet details');
     }
   }
 );
 
 export const updatePetStateAsync = createAsyncThunk(
   'pet/updatePetState',
-  async ({ petId, stateUpdate }: { petId: string; stateUpdate: Partial<PetState> }, { rejectWithValue, getState }) => {
+  async ({ petId, stateUpdate }: { petId: string; stateUpdate: Partial<PetState> }, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string } };
-      const response = await fetch(`/api/state/${petId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${state.auth.token}`,
-        },
-        body: JSON.stringify(stateUpdate),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update pet state');
-      }
-
-      const updatedState: PetState = await response.json();
-      return { petId, state: updatedState };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update pet state');
+      const response = await stateApi.updateState(petId, stateUpdate);
+      return { petId, state: response.data };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update pet state');
     }
   }
 );

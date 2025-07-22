@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import { authApi } from '../../services/api';
 
 export interface User {
   id: string;
@@ -46,23 +47,15 @@ export const loginAsync = createAsyncThunk(
   'auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-
-      const data: AuthResponse = await response.json();
+      const response = await authApi.login(credentials.email, credentials.password);
+      const data: AuthResponse = {
+        access_token: response.data.token,
+        user: response.data.user
+      };
       localStorage.setItem('token', data.access_token);
       return data;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Login failed');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Login failed');
     }
   }
 );
@@ -71,35 +64,30 @@ export const registerAsync = createAsyncThunk(
   'auth/register',
   async (credentials: RegisterCredentials, { rejectWithValue }) => {
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) {
-        throw new Error('Registration failed');
-      }
-
-      const data: AuthResponse = await response.json();
+      const response = await authApi.register(credentials.email, credentials.password, credentials.displayName);
+      const data: AuthResponse = {
+        access_token: response.data.token,
+        user: response.data.user
+      };
       localStorage.setItem('token', data.access_token);
       return data;
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Registration failed');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Registration failed');
     }
   }
 );
 
 export const logoutAsync = createAsyncThunk(
   'auth/logout',
-  async (_, { rejectWithValue }) => {
+  async () => {
     try {
+      await authApi.logout();
       localStorage.removeItem('token');
       return null;
-    } catch (error) {
-      return rejectWithValue('Logout failed');
+    } catch (error: any) {
+      // 即使API调用失败，也要清除本地token
+      localStorage.removeItem('token');
+      return null;
     }
   }
 );
