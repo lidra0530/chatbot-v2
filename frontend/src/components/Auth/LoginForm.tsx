@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Button, message, Space } from 'antd';
+import { Form, Input, Button, Space, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../../store';
@@ -19,6 +19,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const [form] = Form.useForm();
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { message } = App.useApp();
 
   const onFinish = async (values: LoginFormValues) => {
     try {

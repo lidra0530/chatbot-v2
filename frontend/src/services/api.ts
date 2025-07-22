@@ -165,145 +165,145 @@ function createApiError(error: { message: string; status: number; code?: string 
 // Authentication API calls
 export const authApi = {
   login: (email: string, password: string) =>
-    apiClient.post<{token: string; user: any}>('/api/auth/login', { email, password }),
+    apiClient.post<{token: string; user: any}>('/api/v1/auth/login', { email, password }),
   
   register: (email: string, password: string, displayName: string) =>
-    apiClient.post<{token: string; user: any}>('/api/auth/register', { email, password, displayName }),
+    apiClient.post<{token: string; user: any}>('/api/v1/auth/register', { email, password, displayName }),
   
   logout: () =>
-    apiClient.post('/api/auth/logout'),
+    apiClient.post('/api/v1/auth/logout'),
   
   refreshToken: () =>
-    apiClient.post<{token: string}>('/api/auth/refresh'),
+    apiClient.post<{token: string}>('/api/v1/auth/refresh'),
   
   getProfile: () =>
-    apiClient.get<any>('/api/auth/profile'),
+    apiClient.get<any>('/api/v1/auth/profile'),
   
   updateProfile: (data: { displayName?: string; bio?: string }) =>
-    apiClient.put<any>('/api/auth/profile', data)
+    apiClient.put<any>('/api/v1/auth/profile', data)
 };
 
 // Pet management API calls
 export const petApi = {
   getPets: () =>
-    apiClient.get<any[]>('/api/pets'),
+    apiClient.get<any[]>('/api/v1/pets'),
   
   createPet: (data: { name: string; species: string }) =>
-    apiClient.post<any>('/api/pets', data),
+    apiClient.post<any>('/api/v1/pets', data),
   
   getPetById: (petId: string) =>
-    apiClient.get<any>(`/api/pets/${petId}`),
+    apiClient.get<any>(`/api/v1/pets/${petId}`),
   
   updatePet: (petId: string, data: any) =>
-    apiClient.put<any>(`/api/pets/${petId}`, data),
+    apiClient.put<any>(`/api/v1/pets/${petId}`, data),
   
   deletePet: (petId: string) =>
-    apiClient.delete(`/api/pets/${petId}`),
+    apiClient.delete(`/api/v1/pets/${petId}`),
   
   getPetState: (petId: string) =>
-    apiClient.get<any>(`/api/pets/${petId}/state`),
+    apiClient.get<any>(`/api/v1/pets/${petId}/state`),
   
   updatePetState: (petId: string, state: any) =>
-    apiClient.put<any>(`/api/pets/${petId}/state`, state)
+    apiClient.put<any>(`/api/v1/pets/${petId}/state`, state)
 };
 
 // Conversation API calls
 export const chatApi = {
   getConversations: (petId?: string) =>
-    apiClient.get<any[]>(`/api/conversations${petId ? `?petId=${petId}` : ''}`),
+    apiClient.get<any[]>(`/api/v1/conversations${petId ? `?petId=${petId}` : ''}`),
   
   createConversation: (petId: string) =>
-    apiClient.post<any>('/api/conversations', { petId }),
+    apiClient.post<any>('/api/v1/conversations', { petId }),
   
   getConversationById: (conversationId: string) =>
-    apiClient.get<any>(`/api/conversations/${conversationId}`),
+    apiClient.get<any>(`/api/v1/conversations/${conversationId}`),
   
   getConversationMessages: (conversationId: string) =>
-    apiClient.get<any>(`/api/conversations/${conversationId}/messages`),
+    apiClient.get<any>(`/api/v1/conversations/${conversationId}/messages`),
   
   sendMessage: (data: { petId: string; message: string; conversationId?: string }) =>
-    apiClient.post<any>('/api/chat/completion', data),
+    apiClient.post<any>('/api/v1/chat/completion', data),
   
   deleteConversation: (conversationId: string) =>
-    apiClient.delete(`/api/conversations/${conversationId}`)
+    apiClient.delete(`/api/v1/conversations/${conversationId}`)
 };
 
 // Personality system API calls
 export const personalityApi = {
   getPersonality: (petId: string) =>
-    apiClient.get<any>(`/api/personality/${petId}`),
+    apiClient.get<any>(`/api/v1/personality/${petId}`),
   
   getEvolutionHistory: (petId: string) =>
-    apiClient.get<any[]>(`/api/personality/${petId}/evolution`),
+    apiClient.get<any[]>(`/api/v1/personality/${petId}/evolution`),
   
   getPersonalityAnalytics: (petId: string) =>
-    apiClient.get<any>(`/api/personality/${petId}/analytics`),
+    apiClient.get<any>(`/api/v1/personality/${petId}/analytics`),
   
   triggerEvolution: (petId: string) =>
-    apiClient.post<any>(`/api/personality/${petId}/trigger-evolution`),
+    apiClient.post<any>(`/api/v1/personality/${petId}/trigger-evolution`),
   
   updateEvolutionSettings: (petId: string, settings: any) =>
-    apiClient.put<any>(`/api/personality/${petId}/evolution-settings`, settings),
+    apiClient.put<any>(`/api/v1/personality/${petId}/evolution-settings`, settings),
   
   getEvolutionLogs: (petId: string, limit?: number) =>
-    apiClient.get<any[]>(`/api/personality/${petId}/logs${limit ? `?limit=${limit}` : ''}`),
+    apiClient.get<any[]>(`/api/v1/personality/${petId}/logs${limit ? `?limit=${limit}` : ''}`),
   
   analyzeInteractionPatterns: (petId: string) =>
-    apiClient.get<any>(`/api/personality/${petId}/interaction-patterns`)
+    apiClient.get<any>(`/api/v1/personality/${petId}/interaction-patterns`)
 };
 
 // Skills system API calls
 export const skillsApi = {
   getSkillTree: (petId: string) =>
-    apiClient.get<any>(`/api/skills/${petId}`),
+    apiClient.get<any>(`/api/v1/skills/${petId}`),
   
   getAvailableSkills: (petId: string) =>
-    apiClient.get<any[]>(`/api/skills/${petId}/available`),
+    apiClient.get<any[]>(`/api/v1/skills/${petId}/available`),
   
   unlockSkill: (petId: string, skillId: string) =>
-    apiClient.post<any>(`/api/skills/${petId}/unlock`, { skillId }),
+    apiClient.post<any>(`/api/v1/skills/${petId}/unlock`, { skillId }),
   
   addExperience: (petId: string, skillId: string, amount: number) =>
-    apiClient.post<any>(`/api/skills/${petId}/experience`, { skillId, amount }),
+    apiClient.post<any>(`/api/v1/skills/${petId}/experience`, { skillId, amount }),
   
   getCurrentAbilities: (petId: string) =>
-    apiClient.get<string[]>(`/api/skills/${petId}/abilities`),
+    apiClient.get<string[]>(`/api/v1/skills/${petId}/abilities`),
   
   getSkillProgress: (petId: string, skillId: string) =>
-    apiClient.get<any>(`/api/skills/${petId}/progress/${skillId}`),
+    apiClient.get<any>(`/api/v1/skills/${petId}/progress/${skillId}`),
   
   getUnlockHistory: (petId: string) =>
-    apiClient.get<any[]>(`/api/skills/${petId}/unlock-history`),
+    apiClient.get<any[]>(`/api/v1/skills/${petId}/unlock-history`),
   
   evaluateUnlockConditions: (petId: string) =>
-    apiClient.post<any>(`/api/skills/${petId}/evaluate-conditions`)
+    apiClient.post<any>(`/api/v1/skills/${petId}/evaluate-conditions`)
 };
 
 // State system API calls
 export const stateApi = {
   getCurrentState: (petId: string) =>
-    apiClient.get<any>(`/api/state/${petId}`),
+    apiClient.get<any>(`/api/v1/state/${petId}`),
   
   updateState: (petId: string, stateUpdate: any) =>
-    apiClient.put<any>(`/api/state/${petId}`, stateUpdate),
+    apiClient.put<any>(`/api/v1/state/${petId}`, stateUpdate),
   
   processInteraction: (petId: string, interactionType: string, intensity: number) =>
-    apiClient.post<any>(`/api/state/${petId}/interact`, { interactionType, intensity }),
+    apiClient.post<any>(`/api/v1/state/${petId}/interact`, { interactionType, intensity }),
   
   getStateHistory: (petId: string, limit?: number) =>
-    apiClient.get<any[]>(`/api/state/${petId}/history${limit ? `?limit=${limit}` : ''}`),
+    apiClient.get<any[]>(`/api/v1/state/${petId}/history${limit ? `?limit=${limit}` : ''}`),
   
   getStateMilestones: (petId: string) =>
-    apiClient.get<any[]>(`/api/state/${petId}/milestones`),
+    apiClient.get<any[]>(`/api/v1/state/${petId}/milestones`),
   
   getStateAnalytics: (petId: string) =>
-    apiClient.get<any>(`/api/state/${petId}/analytics`),
+    apiClient.get<any>(`/api/v1/state/${petId}/analytics`),
   
   triggerStateDecay: (petId: string) =>
-    apiClient.post<any>(`/api/state/${petId}/decay`),
+    apiClient.post<any>(`/api/v1/state/${petId}/decay`),
   
   updateStateSettings: (petId: string, settings: any) =>
-    apiClient.put<any>(`/api/state/${petId}/settings`, settings)
+    apiClient.put<any>(`/api/v1/state/${petId}/settings`, settings)
 };
 
 export const apiClient = new ApiClient();
