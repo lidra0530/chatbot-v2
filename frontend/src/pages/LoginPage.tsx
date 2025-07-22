@@ -22,7 +22,7 @@ const LoginPage: React.FC = () => {
             borderRadius: 16,
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
           }}
-          bodyStyle={{ padding: '40px 32px' }}
+          styles={{ body: { padding: '40px 32px' } }}
         >
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             {/* 头部 */}

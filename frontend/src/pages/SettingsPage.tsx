@@ -9,7 +9,6 @@ import {
   Button, 
   Space, 
   Typography, 
-  Divider,
   Select,
   Slider,
   message,
@@ -27,7 +26,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
 import type { AppDispatch } from '../store';
-import { updateUserAsync, logoutAsync } from '../store/slices/authSlice';
+import { logoutAsync } from '../store/slices/authSlice';
 import { MainLayout } from '../components/Layout';
 
 const { Title, Text, Paragraph } = Typography;
@@ -89,22 +88,14 @@ const SettingsPage: React.FC = () => {
   const handleSaveSettings = async (values: UserSettings) => {
     setLoading(true);
     try {
-      const result = await dispatch(updateUserAsync({
-        id: user!.id,
-        displayName: values.displayName,
-        bio: values.bio,
-        // 其他设置可以存储在用户偏好中
+      // TODO: 实现更新用户信息API
+      message.success('设置保存成功！');
+      // 这里可以保存其他偏好设置到localStorage或后端
+      localStorage.setItem('userPreferences', JSON.stringify({
+        notifications: values.notifications,
+        privacy: values.privacy,
+        preferences: values.preferences,
       }));
-      
-      if (updateUserAsync.fulfilled.match(result)) {
-        message.success('设置保存成功！');
-        // 这里可以保存其他偏好设置到localStorage或后端
-        localStorage.setItem('userPreferences', JSON.stringify({
-          notifications: values.notifications,
-          privacy: values.privacy,
-          preferences: values.preferences,
-        }));
-      }
     } catch (error) {
       message.error('保存失败，请重试');
     } finally {

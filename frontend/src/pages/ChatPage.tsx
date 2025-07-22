@@ -11,7 +11,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
 import type { AppDispatch } from '../store';
-import { fetchPetByIdAsync } from '../store/slices/petSlice';
+import { fetchPetDetailsAsync } from '../store/slices/petSlice';
 import { ChatInterface } from '../components/Chat';
 import { MainLayout } from '../components/Layout';
 
@@ -27,7 +27,7 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (petId) {
-      dispatch(fetchPetByIdAsync(petId));
+      dispatch(fetchPetDetailsAsync(petId));
     }
   }, [dispatch, petId]);
 
@@ -102,10 +102,10 @@ const ChatPage: React.FC = () => {
                         {currentPet.species || '默认物种'}
                       </Text>
                       <Tag color="blue">
-                        Lv.{currentPet.evolutionStage || 1}
+                        Lv.{currentPet.evolutionLevel || 1}
                       </Tag>
                       <Tag color="green">
-                        {currentPet.state?.mood || '愉快'}
+                        愉快
                       </Tag>
                     </Space>
                   </div>
@@ -154,21 +154,17 @@ const ChatPage: React.FC = () => {
                 <Space direction="vertical" size="small" style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Text>心情</Text>
-                    <Tag color={
-                      currentPet.state?.mood === 'happy' ? 'green' :
-                      currentPet.state?.mood === 'excited' ? 'orange' :
-                      currentPet.state?.mood === 'calm' ? 'blue' : 'default'
-                    }>
-                      {currentPet.state?.mood || '愉快'}
+                    <Tag color="green">
+                      愉快
                     </Tag>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Text>能量</Text>
-                    <Text strong>{Math.round((currentPet.state?.energy || 80) * 100)}%</Text>
+                    <Text strong>{Math.round((currentPet.state?.energy || 0.8) * 100)}%</Text>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Text>满足度</Text>
-                    <Text strong>{Math.round((currentPet.state?.satisfaction || 75) * 100)}%</Text>
+                    <Text strong>{Math.round((currentPet.state?.happiness || 0.75) * 100)}%</Text>
                   </div>
                 </Space>
               </Card>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Spin } from 'antd';
@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = '/login'
 }) => {
   const location = useLocation();
-  const { isAuthenticated, isLoading, user } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
 
   // 如果正在加载，显示加载动画
   if (isLoading) {

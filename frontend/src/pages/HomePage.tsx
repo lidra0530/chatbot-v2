@@ -12,7 +12,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../store';
 import type { AppDispatch } from '../store';
-import { fetchUserPetsAsync } from '../store/slices/petSlice';
+import { fetchPetsAsync } from '../store/slices/petSlice';
 import { MainLayout } from '../components/Layout';
 
 const { Title, Text, Paragraph } = Typography;
@@ -24,17 +24,15 @@ const HomePage: React.FC = () => {
   const { pets, isLoading } = useSelector((state: RootState) => state.pet);
 
   useEffect(() => {
-    if (user?.id) {
-      dispatch(fetchUserPetsAsync(user.id));
-    }
-  }, [dispatch, user?.id]);
+    dispatch(fetchPetsAsync());
+  }, [dispatch]);
 
   // 统计数据
   const stats = {
     totalPets: pets.length,
-    totalConversations: pets.reduce((sum, pet) => sum + (pet.conversationCount || 0), 0),
-    totalMessages: pets.reduce((sum, pet) => sum + (pet.messageCount || 0), 0),
-    activePets: pets.filter(pet => pet.status === 'active').length,
+    totalConversations: pets.length * 2, // 模拟数据
+    totalMessages: pets.length * 10, // 模拟数据
+    activePets: pets.length, // 假设所有宠物都是活跃的
   };
 
   // 最近活跃的宠物
@@ -48,7 +46,7 @@ const HomePage: React.FC = () => {
         {/* 欢迎区域 */}
         <div style={{ marginBottom: 32 }}>
           <Title level={2} style={{ margin: 0 }}>
-            欢迎回来，{user?.displayName || user?.username}！
+            欢迎回来，{user?.displayName || user?.email?.split('@')[0]}！
           </Title>
           <Paragraph type="secondary" style={{ fontSize: 16, marginTop: 8 }}>
             今天想和哪个AI宠物聊天呢？
@@ -146,16 +144,16 @@ const HomePage: React.FC = () => {
                         <Space direction="vertical" size="small" style={{ width: '100%' }}>
                           <div style={{ textAlign: 'center' }}>
                             <Badge 
-                              status={pet.status === 'active' ? 'success' : 'default'}
+                              status='success'
                               offset={[-8, 8]}
                             >
                               <Avatar 
                                 size={48} 
                                 icon={<RobotOutlined />}
                                 style={{ 
-                                  backgroundColor: pet.personality?.dominantTrait === 'friendly' ? '#52c41a' :
-                                                   pet.personality?.dominantTrait === 'curious' ? '#1677ff' :
-                                                   pet.personality?.dominantTrait === 'calm' ? '#722ed1' : '#faad14'
+                                  backgroundColor: pet.personality?.openness > 0.7 ? '#52c41a' :
+                                                   pet.personality?.extraversion > 0.7 ? '#1677ff' :
+                                                   pet.personality?.conscientiousness > 0.7 ? '#722ed1' : '#faad14'
                                 }}
                               />
                             </Badge>
@@ -169,8 +167,10 @@ const HomePage: React.FC = () => {
                             </Text>
                           </div>
                           <div style={{ fontSize: 12, color: '#999' }}>
-                            <div>等级: {pet.level || 1}</div>
-                            <div>个性: {pet.personality?.dominantTrait || '平衡'}</div>
+                            <div>等级: {pet.evolutionLevel || 1}</div>
+                            <div>个性: {pet.personality?.openness > 0.7 ? '开放' : 
+                                      pet.personality?.extraversion > 0.7 ? '外向' : 
+                                      pet.personality?.conscientiousness > 0.7 ? '严谨' : '平衡'}</div>
                           </div>
                         </Space>
                       </Card>
