@@ -27,6 +27,29 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
   
+  // Enable CORS for frontend development
+  app.enableCors({
+    origin: [
+      'http://localhost:5173', // Vite default port
+      'http://localhost:5174', // Vite alternative port
+      'http://localhost:3000', // Fallback port
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:3000',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Cache-Control',
+    ],
+    credentials: true,
+    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  });
+  
   // Set global prefix
   app.setGlobalPrefix('api/v1');
   
