@@ -1,8 +1,8 @@
 // 宠物完整数据模型类型定义
 
 import type { PersonalityTraits, PersonalityEvolution, PersonalityAnalysis } from './personality.types';
-import type { SkillProgress, SkillAbility, SkillAchievement, SkillStatistics } from './skills.types';
-import type { PetState, StateHistory, StateAnalysis, StateMilestone } from './state.types';
+import type { SkillProgress, SkillAbility, SkillStatistics } from './skills.types';
+import type { PetState, StateHistory, StateAnalysis } from './state.types';
 
 // 宠物基础信息
 export interface Pet {

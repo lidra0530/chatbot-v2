@@ -1,8 +1,8 @@
 import { store } from '../store';
 import { updateConnectionStatus, addMessage } from '../store/slices/chatSlice';
-import { updatePersonalityTraits, addEvolutionToHistory } from '../store/slices/personalitySlice';
-import { updateSkillProgress, addSkillUnlockEvent } from '../store/slices/skillsSlice';
-import { updateCurrentState, addStateToHistory, addMilestone } from '../store/slices/stateSlice';
+import { updateTraits, addEvolutionToHistory } from '../store/slices/personalitySlice';
+import { updateSkillProgress } from '../store/slices/skillsSlice';
+import { updateCurrentState, addMilestone } from '../store/slices/stateSlice';
 
 export interface WebSocketMessage {
   type: string;
@@ -37,25 +37,25 @@ class WebSocketManager {
   private setupDefaultEventHandlers(): void {
     this.eventHandlers = {
       'personality:updated': (data) => {
-        store.dispatch(updatePersonalityTraits(data.traits));
+        store.dispatch(updateTraits(data.traits));
         if (data.evolution) {
           store.dispatch(addEvolutionToHistory(data.evolution));
         }
       },
       'skills:progress': (data) => {
-        store.dispatch(updateSkillProgress({
-          skillId: data.skillId,
-          progress: data.progress
-        }));
+        store.dispatch(updateSkillProgress(data.progress));
       },
       'skills:unlocked': (data) => {
-        store.dispatch(addSkillUnlockEvent(data.unlockEvent));
+        // Use updateSkillProgress for unlocked skills as well
+        store.dispatch(updateSkillProgress({
+          ...data.progress,
+          isUnlocked: true,
+          unlockedAt: new Date().toISOString()
+        }));
       },
       'state:updated': (data) => {
         store.dispatch(updateCurrentState(data.state));
-        if (data.history) {
-          store.dispatch(addStateToHistory(data.history));
-        }
+        // State history is now handled internally by the slice
         if (data.milestone) {
           store.dispatch(addMilestone(data.milestone));
         }

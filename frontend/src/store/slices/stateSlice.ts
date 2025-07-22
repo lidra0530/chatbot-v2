@@ -5,9 +5,16 @@ import type {
   PetState, 
   StateChange, 
   StateMilestone,
-  StateAnalytics,
-  StateSettings
+  StateAnalysis
 } from '../../types/state.types';
+
+// Temporary state settings type until types are fully implemented  
+interface StateSettings {
+  decayEnabled: boolean;
+  decayRate: number;
+  autoSave: boolean;
+  predictionsEnabled: boolean;
+}
 
 // Enhanced State Slice State with comprehensive analytics support
 export interface StateSliceState {
@@ -17,7 +24,7 @@ export interface StateSliceState {
   milestones: StateMilestone[];
   
   // Analytics and insights
-  analytics: StateAnalytics | null;
+  analytics: StateAnalysis | null;
   trends: Record<string, Array<{ timestamp: string; value: number }>>;
   
   // State management settings
@@ -344,7 +351,7 @@ export const stateSlice = createSlice({
     },
     
     // Decay management
-    updateDecayRates: (state, action: PayloadAction<Partial<Record<string, number>>>) => {
+    updateDecayRates: (state, action: PayloadAction<Record<string, number>>) => {
       state.decayRates = { ...state.decayRates, ...action.payload };
     },
     

@@ -31,7 +31,7 @@ import type { RootState } from '../store';
 import type { AppDispatch } from '../store';
 import { fetchPetsAsync, createPetAsync } from '../store/slices/petSlice';
 import { MainLayout } from '../components/Layout';
-import type { Pet } from '../store/slices/petSlice';
+import type { Pet } from '../types/pet.types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -55,7 +55,7 @@ const PetManagePage: React.FC = () => {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    dispatch(fetchPetsAsync());
+    dispatch(fetchPetsAsync(false));
   }, [dispatch]);
 
   // 创建宠物

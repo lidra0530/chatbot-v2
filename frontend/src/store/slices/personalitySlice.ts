@@ -5,9 +5,16 @@ import type {
   PersonalityTraits, 
   PersonalityEvolution, 
   PersonalityAnalysis,
-  InteractionPattern,
-  EvolutionSettings
+  InteractionPattern
 } from '../../types/personality.types';
+
+// Temporary evolution settings type until types are fully implemented
+interface EvolutionSettings {
+  enabled: boolean;
+  sensitivity: number;
+  minConfidence: number;
+  cooldownPeriod: number;
+}
 
 // Enhanced Personality Slice State with evolution history and analytics support
 export interface PersonalityState {
@@ -369,11 +376,11 @@ export const personalitySlice = createSlice({
       })
       
       // Fetch evolution logs
-      .addCase(fetchEvolutionLogsAsync.fulfilled, (state, action) => {
+      .addCase(fetchEvolutionLogsAsync.fulfilled, (_state, _action) => {
         // Process evolution logs into history format
-        const logs = action.payload.logs;
         // This would typically transform raw logs into PersonalityEvolution objects
         // Implementation depends on backend log format
+        // TODO: Implement log processing when backend format is defined
       })
       
       // Handle all async rejections

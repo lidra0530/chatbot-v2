@@ -34,7 +34,7 @@ const HomePage: React.FC = () => {
   const { pets, isLoading } = useSelector((state: RootState) => state.pet);
 
   useEffect(() => {
-    dispatch(fetchPetsAsync());
+    dispatch(fetchPetsAsync(false));
   }, [dispatch]);
 
   // 统计数据

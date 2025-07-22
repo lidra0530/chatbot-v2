@@ -432,14 +432,18 @@ export const skillsSlice = createSlice({
           skillProgress.isUnlocked = true;
           skillProgress.unlockedAt = new Date().toISOString();
         } else {
-          state.progress.push({
+          // Create a complete SkillProgress object
+          const newProgress: SkillProgress = {
             skillId,
+            name: unlock.skillName || skillId,
+            category: unlock.category || 'general',
+            maxLevel: unlock.maxLevel || 10,
             experience: unlock.experience || 0,
             level: unlock.level || 1,
             isUnlocked: true,
             unlockedAt: new Date().toISOString(),
-            lastProgressUpdate: new Date().toISOString(),
-          });
+          };
+          state.progress.push(newProgress);
         }
         
         // Add to unlock history
@@ -469,12 +473,8 @@ export const skillsSlice = createSlice({
         if (existingProgress) {
           existingProgress.experience = progress.experience;
           existingProgress.level = progress.level;
-          existingProgress.lastProgressUpdate = new Date().toISOString();
         } else {
-          state.progress.push({
-            ...progress,
-            lastProgressUpdate: new Date().toISOString(),
-          });
+          state.progress.push(progress);
         }
       })
       
