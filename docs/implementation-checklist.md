@@ -1,5 +1,15 @@
 # 电子宠物系统实施清单 (修订版 v2.4)
 
+## 前端计划变更通知 (2025-07-22)
+
+**重要通知**：由于在阶段八开发中发现现有前端计划不足以支撑后端复杂AI功能的需求，现已正式采纳新的前端开发计划。
+
+- ✅ **新前端计划**: `docs/frontend-development-plan.md` 已成为唯一前端开发指导文档
+- ❌ **旧前端计划废弃**: 本文档中【阶段九】及之后的所有前端相关任务现已作废
+- 📋 **后续开发**: 严格按照新前端计划的9阶段213任务执行
+
+---
+
 ## 阶段一：项目基础设施搭建 (1-2天)
 
 ### 1. 项目结构初始化
@@ -571,135 +581,137 @@
 
 ### 69. API客户端开发
 258. 创建 `src/services/api.ts` 统一API客户端（适配Vite环境变量）
-234. 实现认证相关API调用
-235. 实现宠物管理API调用
-236. 实现对话API调用
+259. 实现认证相关API调用
+260. 实现宠物管理API调用
+261. 实现对话API调用
 
-### 65. 版本控制提交 - API客户端基础
-237. 将API客户端基础添加到暂存区：`git add frontend/src/services/api.ts`
-238. 执行提交：`git commit -m "feat: implement API client foundation
+### 70. 版本控制提交 - API客户端基础
+262. 将API客户端基础添加到暂存区：`git add frontend/src/services/api.ts`
+263. 执行提交：`git commit -m "feat: implement API client foundation
 
 - Create unified API client with Vite environment integration
 - Add authentication API endpoints
 - Implement pet management API calls
 - Create chat API interface with type safety"`
 
-### 66. AI功能API客户端
-239. 实现个性系统API调用
-240. 实现技能系统API调用
-241. 实现状态系统API调用
+### 71. AI功能API客户端
+264. 实现个性系统API调用
+265. 实现技能系统API调用
+266. 实现状态系统API调用
 
-### 67. 版本控制提交 - AI API客户端
-242. 将AI API客户端添加到暂存区：`git add frontend/src/services/`
-243. 执行提交：`git commit -m "feat: implement AI features API client
+### 72. 版本控制提交 - AI API客户端
+267. 将AI API客户端添加到暂存区：`git add frontend/src/services/`
+268. 执行提交：`git commit -m "feat: implement AI features API client
 
 - Add personality system API integration
 - Create skills management API calls
 - Implement state monitoring API interface
 - Add real-time data synchronization methods"`
 
-### 68. 基础UI组件开发
-244. 创建 `src/components/Layout` 布局组件
-245. 创建 `src/components/Auth` 认证组件
-246. 创建 `src/components/Pet` 宠物信息组件
+### 73. 基础UI组件开发
+269. 创建 `src/components/Layout` 布局组件
+270. 创建 `src/components/Auth` 认证组件
+271. 创建 `src/components/Pet` 宠物信息组件
 
-### 69. 版本控制提交 - 基础组件
-247. 将基础组件添加到暂存区：`git add frontend/src/components/Layout/ frontend/src/components/Auth/ frontend/src/components/Pet/`
-248. 执行提交：`git commit -m "feat: create basic UI components
+### 74. 版本控制提交 - 基础组件
+272. 将基础组件添加到暂存区：`git add frontend/src/components/Layout/ frontend/src/components/Auth/ frontend/src/components/Pet/`
+273. 执行提交：`git commit -m "feat: create basic UI components
 
 - Implement responsive layout components
 - Create authentication forms and flows
 - Add pet information display components
 - Set up component library foundation"`
 
-### 70. 对话界面组件
-249. 创建 `src/components/Chat` 对话组件
-250. 实现消息显示和输入功能
-251. 添加对话历史管理
+### 75. 对话界面组件
+274. 创建 `src/components/Chat` 对话组件
+275. 实现消息显示和输入功能
+276. 添加对话历史管理
 
-### 71. 版本控制提交 - 对话组件
-252. 将对话组件添加到暂存区：`git add frontend/src/components/Chat/`
-253. 执行提交：`git commit -m "feat: implement chat interface components
+### 76. 版本控制提交 - 对话组件
+277. 将对话组件添加到暂存区：`git add frontend/src/components/Chat/`
+278. 执行提交：`git commit -m "feat: implement chat interface components
 
 - Create real-time chat components with message display
 - Add chat input with enhanced features
 - Implement conversation history management
 - Create responsive chat interface design"`
 
-### 72. 页面路由配置
-254. 安装并配置 React Router：`pnpm add react-router-dom @types/react-router-dom`
-255. 创建登录页面
-256. 创建主界面页面
-257. 创建宠物管理页面
-258. 创建对话页面
-259. 创建设置页面
-260. 实现路由守卫和权限控制
+### 77. 页面路由配置
+279. 安装并配置 React Router：`pnpm add react-router-dom @types/react-router-dom`
+280. 创建登录页面
+281. 创建主界面页面
+282. 创建宠物管理页面
+283. 创建对话页面
+284. 创建设置页面
+285. 实现路由守卫和权限控制
 
-### 73. 版本控制提交 - 路由系统
-261. 将路由配置添加到暂存区：`git add frontend/src/pages/ frontend/src/App.tsx`
-262. 执行提交：`git commit -m "feat: implement routing and page structure
+### 78. 版本控制提交 - 路由系统
+286. 将路由配置添加到暂存区：`git add frontend/src/pages/ frontend/src/App.tsx`
+287. 执行提交：`git commit -m "feat: implement routing and page structure
 
 - Set up React Router with TypeScript integration
 - Create main application pages and navigation
 - Implement route guards and authentication protection
 - Add responsive page layouts and transitions"`
 
-## 阶段九：前端高级功能开发 (3-4天)
+## ❌ 阶段九：前端高级功能开发 (3-4天) - **已废弃**
 
-### 74. 个性可视化组件
-263. 创建个性特质雷达图组件
-264. 创建个性演化历史图表组件
-265. 实现个性数据的实时更新
-266. 添加个性变化的动画效果
+**重要提醒**: 本阶段及之后所有前端相关任务现已废弃，请参考 `docs/frontend-development-plan.md` 进行前端开发。
 
-### 75. 版本控制提交 - 个性可视化
-267. 将个性可视化组件添加到暂存区：`git add frontend/src/components/Personality/`
-268. 执行提交：`git commit -m "feat: implement personality visualization components
+### 79. 个性可视化组件
+288. 创建个性特质雷达图组件
+289. 创建个性演化历史图表组件
+290. 实现个性数据的实时更新
+291. 添加个性变化的动画效果
+
+### 80. 版本控制提交 - 个性可视化
+292. 将个性可视化组件添加到暂存区：`git add frontend/src/components/Personality/`
+293. 执行提交：`git commit -m "feat: implement personality visualization components
 
 - Create interactive personality trait radar charts
 - Add personality evolution history visualization
 - Implement real-time personality data updates
 - Add smooth animations for personality changes"`
 
-### 76. 技能树可视化组件
-269. 创建技能树图形化展示组件
-270. 实现技能解锁的动画效果
-271. 创建技能详情弹窗组件
-272. 实现技能进度的实时更新
+### 81. 技能树可视化组件
+294. 创建技能树图形化展示组件
+295. 实现技能解锁的动画效果
+296. 创建技能详情弹窗组件
+297. 实现技能进度的实时更新
 
-### 77. 版本控制提交 - 技能可视化
-273. 将技能可视化组件添加到暂存区：`git add frontend/src/components/Skills/`
-274. 执行提交：`git commit -m "feat: implement skills tree visualization
+### 82. 版本控制提交 - 技能可视化
+298. 将技能可视化组件添加到暂存区：`git add frontend/src/components/Skills/`
+299. 执行提交：`git commit -m "feat: implement skills tree visualization
 
 - Create interactive skill tree with node-based layout
 - Add skill unlock animations and progress indicators
 - Implement skill details modal with rich information
 - Create real-time skill progress tracking"`
 
-### 78. 状态监控界面
-275. 创建宠物状态仪表盘组件
-276. 实现状态值的动态展示
-277. 创建状态历史图表组件
-278. 添加状态交互按钮和效果
+### 83. 状态监控界面
+300. 创建宠物状态仪表盘组件
+301. 实现状态值的动态展示
+302. 创建状态历史图表组件
+303. 添加状态交互按钮和效果
 
-### 79. 版本控制提交 - 状态监控
-279. 将状态监控组件添加到暂存区：`git add frontend/src/components/State/`
-280. 执行提交：`git commit -m "feat: implement state monitoring dashboard
+### 84. 版本控制提交 - 状态监控
+304. 将状态监控组件添加到暂存区：`git add frontend/src/components/State/`
+305. 执行提交：`git commit -m "feat: implement state monitoring dashboard
 
 - Create comprehensive pet state dashboard
 - Add real-time state value displays and indicators
 - Implement state history charts and analytics
 - Create interactive state management controls"`
 
-### 80. WebSocket前端集成
-281. 创建 WebSocket 连接管理服务（适配Vite环境）
-282. 实现实时事件的接收和处理
-283. 集成实时通知到各个组件
-284. 实现连接状态的用户提示
+### 85. WebSocket前端集成
+306. 创建 WebSocket 连接管理服务（适配Vite环境）
+307. 实现实时事件的接收和处理
+308. 集成实时通知到各个组件
+309. 实现连接状态的用户提示
 
-### 81. 版本控制提交 - WebSocket前端
-285. 将WebSocket前端集成添加到暂存区：`git add frontend/src/services/websocket.ts`
-286. 执行提交：`git commit -m "feat: integrate WebSocket client for real-time updates
+### 86. 版本控制提交 - WebSocket前端
+310. 将WebSocket前端集成添加到暂存区：`git add frontend/src/services/websocket.ts`
+311. 执行提交：`git commit -m "feat: integrate WebSocket client for real-time updates
 
 - Create WebSocket connection management service
 - Implement real-time event handling and dispatching
@@ -708,44 +720,44 @@
 
 ## 阶段十：系统测试和优化 (3-4天)
 
-### 82. 核心算法单元测试
-287. 为个性演化算法编写单元测试
-288. 为状态驱动算法编写单元测试
-289. 为技能系统算法编写单元测试
+### 87. 核心算法单元测试
+312. 为个性演化算法编写单元测试
+313. 为状态驱动算法编写单元测试
+314. 为技能系统算法编写单元测试
 
-### 83. 版本控制提交 - 算法测试
-290. 将算法测试添加到暂存区：`git add backend/src/algorithms/*.spec.ts`
-291. 执行提交：`git commit -m "test: add unit tests for core algorithms
+### 88. 版本控制提交 - 算法测试
+315. 将算法测试添加到暂存区：`git add backend/src/algorithms/*.spec.ts`
+316. 执行提交：`git commit -m "test: add unit tests for core algorithms
 
 - Create comprehensive tests for personality evolution logic
 - Add state-driven system algorithm testing
 - Implement skill tree system unit tests
 - Ensure algorithm reliability and edge case handling"`
 
-### 84. API控制器和服务测试
-292. 为API控制器编写单元测试
-293. 为服务层编写单元测试
-294. 添加数据验证和错误处理测试
+### 89. API控制器和服务测试
+317. 为API控制器编写单元测试
+318. 为服务层编写单元测试
+319. 添加数据验证和错误处理测试
 
-### 85. 版本控制提交 - API测试
-295. 将API测试添加到暂存区：`git add backend/src/modules/**/*.spec.ts`
-296. 执行提交：`git commit -m "test: add comprehensive API and service tests
+### 90. 版本控制提交 - API测试
+320. 将API测试添加到暂存区：`git add backend/src/modules/**/*.spec.ts`
+321. 执行提交：`git commit -m "test: add comprehensive API and service tests
 
 - Create unit tests for all API controllers
 - Add service layer testing with mocked dependencies
 - Implement data validation and error handling tests
 - Ensure API reliability and proper error responses"`
 
-### 86. 集成测试编写
-297. 编写个性演化流程的集成测试
-298. 编写技能解锁流程的集成测试
-299. 编写状态更新流程的集成测试
-300. 编写对话增强流程的集成测试
-301. 编写WebSocket通信的集成测试
+### 91. 集成测试编写
+322. 编写个性演化流程的集成测试
+323. 编写技能解锁流程的集成测试
+324. 编写状态更新流程的集成测试
+325. 编写对话增强流程的集成测试
+326. 编写WebSocket通信的集成测试
 
-### 87. 版本控制提交 - 集成测试
-302. 将集成测试添加到暂存区：`git add backend/test/integration/`
-303. 执行提交：`git commit -m "test: implement comprehensive integration tests
+### 92. 版本控制提交 - 集成测试
+327. 将集成测试添加到暂存区：`git add backend/test/integration/`
+328. 执行提交：`git commit -m "test: implement comprehensive integration tests
 
 - Add end-to-end personality evolution workflow tests
 - Create skill unlocking and progression integration tests
@@ -753,16 +765,16 @@
 - Add enhanced chat flow integration tests
 - Create WebSocket communication testing"`
 
-### 88. 性能优化
-304. 优化数据库查询性能
-305. 实现关键数据的缓存策略
-306. 优化API响应时间
-307. 优化前端组件渲染性能（利用Vite的优化特性）
-308. 实现前端代码分割和懒加载
+### 93. 性能优化
+329. 优化数据库查询性能
+330. 实现关键数据的缓存策略
+331. 优化API响应时间
+332. 优化前端组件渲染性能（利用Vite的优化特性）
+333. 实现前端代码分割和懒加载
 
-### 89. 版本控制提交 - 性能优化
-309. 将性能优化添加到暂存区：`git add .`
-310. 执行提交：`git commit -m "perf: implement performance optimizations
+### 94. 版本控制提交 - 性能优化
+334. 将性能优化添加到暂存区：`git add .`
+335. 执行提交：`git commit -m "perf: implement performance optimizations
 
 - Optimize database queries with indexing and caching
 - Add Redis caching for frequently accessed data
@@ -770,16 +782,16 @@
 - Add frontend code splitting and lazy loading
 - Optimize component rendering with React.memo"`
 
-### 90. 系统监控和日志
-311. 配置应用性能监控
-312. 实现错误日志收集
-313. 配置API调用监控
-314. 实现用户行为分析
-315. 配置系统健康检查
+### 95. 系统监控和日志
+336. 配置应用性能监控
+337. 实现错误日志收集
+338. 配置API调用监控
+339. 实现用户行为分析
+340. 配置系统健康检查
 
-### 91. 版本控制提交 - 监控系统
-316. 将监控配置添加到暂存区：`git add backend/src/monitoring/ backend/src/logging/`
-317. 执行提交：`git commit -m "feat: implement monitoring and logging system
+### 96. 版本控制提交 - 监控系统
+341. 将监控配置添加到暂存区：`git add backend/src/monitoring/ backend/src/logging/`
+342. 执行提交：`git commit -m "feat: implement monitoring and logging system
 
 - Add application performance monitoring
 - Create comprehensive error logging and tracking
@@ -789,78 +801,78 @@
 
 ## 阶段十一：部署和文档 (2-3天)
 
-### 92. 生产环境配置
-318. 配置生产环境变量
-319. 创建生产环境数据库
-320. 配置Nginx反向代理（可选）
-321. 实现前端生产构建（使用 `pnpm build`）
-322. 配置PM2进程管理（使用pnpm生态）
+### 97. 生产环境配置
+343. 配置生产环境变量
+344. 创建生产环境数据库
+345. 配置Nginx反向代理（可选）
+346. 实现前端生产构建（使用 `pnpm build`）
+347. 配置PM2进程管理（使用pnpm生态）
 
-### 93. 版本控制提交 - 生产配置
-323. 将生产配置添加到暂存区：`git add deployment/ .env.production`
-324. 执行提交：`git commit -m "feat: add production deployment configuration
+### 98. 版本控制提交 - 生产配置
+348. 将生产配置添加到暂存区：`git add deployment/ .env.production`
+349. 执行提交：`git commit -m "feat: add production deployment configuration
 
 - Create production environment variable templates
 - Add database setup scripts for production
 - Configure Nginx reverse proxy settings
 - Set up PM2 process management configuration"`
 
-### 94. 包管理器优化
-325. 配置 `.npmrc` 文件优化pnpm设置
-326. 实现 `pnpm-lock.yaml` 的版本锁定
-327. 配置monorepo workspace（可选）
-328. 优化pnpm缓存策略
+### 99. 包管理器优化
+350. 配置 `.npmrc` 文件优化pnpm设置
+351. 实现 `pnpm-lock.yaml` 的版本锁定
+352. 配置monorepo workspace（可选）
+353. 优化pnpm缓存策略
 
-### 95. 版本控制提交 - 包管理优化
-329. 将包管理优化添加到暂存区：`git add .npmrc pnpm-workspace.yaml`
-330. 执行提交：`git commit -m "chore: optimize pnpm configuration and workspace
+### 100. 版本控制提交 - 包管理优化
+354. 将包管理优化添加到暂存区：`git add .npmrc pnpm-workspace.yaml`
+355. 执行提交：`git commit -m "chore: optimize pnpm configuration and workspace
 
 - Configure pnpm settings for optimal performance
 - Lock dependency versions for production stability
 - Set up monorepo workspace configuration
 - Optimize package caching and installation strategies"`
 
-### 96. API文档生成
-331. 配置Swagger文档生成
-332. 添加API端点的详细文档
-333. 创建API使用示例
-334. 生成在线API文档
+### 101. API文档生成
+356. 配置Swagger文档生成
+357. 添加API端点的详细文档
+358. 创建API使用示例
+359. 生成在线API文档
 
-### 97. 版本控制提交 - API文档
-335. 将API文档添加到暂存区：`git add backend/src/swagger/ docs/api/`
-336. 执行提交：`git commit -m "docs: generate comprehensive API documentation
+### 102. 版本控制提交 - API文档
+360. 将API文档添加到暂存区：`git add backend/src/swagger/ docs/api/`
+361. 执行提交：`git commit -m "docs: generate comprehensive API documentation
 
 - Configure Swagger/OpenAPI documentation
 - Add detailed endpoint descriptions and examples
 - Create API usage guides and best practices
 - Generate interactive API documentation portal"`
 
-### 98. 用户文档编写
-337. 编写系统使用说明
-338. 创建功能介绍文档
-339. 编写故障排除指南
-340. 创建开发者指南（包含pnpm和Vite相关内容）
+### 103. 用户文档编写
+362. 编写系统使用说明
+363. 创建功能介绍文档
+364. 编写故障排除指南
+365. 创建开发者指南（包含pnpm和Vite相关内容）
 
-### 99. 版本控制提交 - 用户文档
-341. 将用户文档添加到暂存区：`git add docs/user/ docs/developer/`
-342. 执行提交：`git commit -m "docs: create user and developer documentation
+### 104. 版本控制提交 - 用户文档
+366. 将用户文档添加到暂存区：`git add docs/user/ docs/developer/`
+367. 执行提交：`git commit -m "docs: create user and developer documentation
 
 - Add comprehensive user guides and tutorials
 - Create feature documentation with screenshots
 - Write troubleshooting guides for common issues
 - Add developer setup and contribution guidelines"`
 
-### 100. 最终部署测试
-343. 在生产环境进行完整功能测试
-344. 进行性能压力测试
-345. 验证所有API端点正常工作
-346. 测试WebSocket连接稳定性
-347. 验证数据持久化正确性
-348. 测试Vite构建产物的正确性
+### 105. 最终部署测试
+368. 在生产环境进行完整功能测试
+369. 进行性能压力测试
+370. 验证所有API端点正常工作
+371. 测试WebSocket连接稳定性
+372. 验证数据持久化正确性
+373. 测试Vite构建产物的正确性
 
-### 101. 版本控制提交 - 部署验证
-349. 将测试结果和修复添加到暂存区：`git add .`
-350. 执行提交：`git commit -m "test: complete production deployment validation
+### 106. 版本控制提交 - 部署验证
+374. 将测试结果和修复添加到暂存区：`git add .`
+375. 执行提交：`git commit -m "test: complete production deployment validation
 
 - Verify all functionality in production environment
 - Complete performance and stress testing
@@ -870,7 +882,7 @@
 
 ---
 
-**总计**: 约380个具体实施步骤 (新增32个)  
+**总计**: 约375个具体实施步骤 (新增32个)  
 **预估开发时间**: 37-47天 (单人开发)  
 **核心里程碑**: 
 - 第12天: 基础框架完成（包含pnpm和Vite配置）
@@ -879,10 +891,10 @@
 - 第42天: 前端界面完成
 - 第47天: 部署上线完成
 
-**序号修正状态 (v2.4)**:
+**序号修正状态 (v2.5)**:
 - ✅ 阶段一~五: 步骤1-194 (已完全修正)
 - ✅ 阶段六~七: 步骤195-246 (已完全修正)  
-- 🔄 阶段八~十一: 需要从步骤247开始重新编号 (剩余~134步骤)
+- ✅ 阶段八~十一: 步骤247-375 (已完全修正)
 
 **阶段三重构说明 (v2.4新特性)**:
 - 个性演化算法采用流水线架构设计
@@ -915,3 +927,5 @@
 - 易于维护：支持精确的功能回滚和代码审查
 
 **重要说明**: 本清单采用业界最佳的版本控制实践，确保每个提交都具有明确的功能边界和完整的变更描述，便于团队协作和项目维护。
+
+**序号修正完成 (2025-07-21)**: 阶段八到阶段十一的所有步骤序号已修正为247-375，保持连续性和一致性。

@@ -1,3 +1,8 @@
+---
+default_mcps:
+  - context7
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -138,3 +143,9 @@ This project follows a detailed implementation checklist (`docs/implementation-c
 - 成本控制、缓存优化和性能监控
 
 **下一步**: 开始前端React+TypeScript开发
+
+# 前端开发计划变更 (2025-07-22)
+**重要通知**: 项目现已采纳全新的前端开发计划
+- ✅ **新前端指导文档**: `docs/frontend-development-plan.md` 已成为唯一前端开发指导
+- ❌ **旧计划已废弃**: `docs/implementation-checklist.md` 中阶段九及之后的前端任务已作废
+- 📋 **开发指导**: 严格按照新前端计划的9阶段213任务执行前端开发
