@@ -1,46 +1,16 @@
 /**
  * 个性可视化组件导出文件
  * 统一导出所有个性相关的可视化组件
+ * 
+ * 注意：组件正在重建中，暂时只导出配置和工具函数
  */
 
-// 主要可视化组件
-export { default as PersonalityRadarChart } from './PersonalityRadarChart';
-export { default as EvolutionHistoryChart } from './EvolutionHistoryChart';
-export { default as PersonalityTrends } from './PersonalityTrends';
-export { default as PersonalityAnalytics } from './PersonalityAnalytics';
-export { default as PersonalityAnimations } from './PersonalityAnimations';
-
-// 组件类型定义 - import for types
-import type PersonalityRadarChart from './PersonalityRadarChart';
-import type EvolutionHistoryChart from './EvolutionHistoryChart';
-import type PersonalityTrends from './PersonalityTrends';
-import type PersonalityAnalytics from './PersonalityAnalytics';
-import type PersonalityAnimations from './PersonalityAnimations';
-
-export type PersonalityRadarChartProps = React.ComponentProps<typeof PersonalityRadarChart>;
-export type EvolutionHistoryChartProps = React.ComponentProps<typeof EvolutionHistoryChart>;
-export type PersonalityTrendsProps = React.ComponentProps<typeof PersonalityTrends>;
-export type PersonalityAnalyticsProps = React.ComponentProps<typeof PersonalityAnalytics>;
-export type PersonalityAnimationsProps = React.ComponentProps<typeof PersonalityAnimations>;
-
-// Import components for bundle
-import PersonalityRadarChartComponent from './PersonalityRadarChart';
-import EvolutionHistoryChartComponent from './EvolutionHistoryChart';
-import PersonalityTrendsComponent from './PersonalityTrends';
-import PersonalityAnalyticsComponent from './PersonalityAnalytics';
-import PersonalityAnimationsComponent from './PersonalityAnimations';
-
-/**
- * 个性可视化组件集合
- * 提供统一的访问接口
- */
-export const PersonalityComponents = {
-  RadarChart: PersonalityRadarChartComponent,
-  EvolutionHistory: EvolutionHistoryChartComponent,
-  Trends: PersonalityTrendsComponent,
-  Analytics: PersonalityAnalyticsComponent,
-  Animations: PersonalityAnimationsComponent
-} as const;
+// TODO: 重建以下组件
+// export { default as PersonalityRadarChart } from './PersonalityRadarChart';
+// export { default as EvolutionHistoryChart } from './EvolutionHistoryChart';
+// export { default as PersonalityTrends } from './PersonalityTrends';
+// export { default as PersonalityAnalytics } from './PersonalityAnalytics';
+// export { default as PersonalityAnimations } from './PersonalityAnimations';
 
 /**
  * 组件配置常量

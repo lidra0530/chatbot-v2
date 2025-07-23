@@ -1,29 +1,29 @@
 // Skills Components Library
 // Comprehensive skill tree visualization system with interactive components
+// 
+// 注意：组件正在重建中，暂时只导出配置和工具函数
 
-// Core Components
-export { SkillTreeVisualization } from './SkillTreeVisualization';
-export type { SkillTreeVisualizationProps, SkillNode } from './SkillTreeVisualization';
+// TODO: 重建以下组件
+// export { SkillTreeVisualization } from './SkillTreeVisualization';
+// export { SkillNode as SkillNodeComponent } from './SkillNode';
+// export { SkillProgressBar } from './SkillProgressBar';
+// export { SkillTooltip } from './SkillTooltip';
+// export { SkillUnlockAnimation, SkillLevelUpAnimation } from './SkillUnlockAnimation';
 
-export { SkillNode as SkillNodeComponent } from './SkillNode';
-export type { SkillNodeProps } from './SkillNode';
-
-// Import SkillNode type for internal use
-import type { SkillNode } from './SkillTreeVisualization';
-
-export { SkillProgressBar } from './SkillProgressBar';
-export type { SkillProgressBarProps } from './SkillProgressBar';
-
-export { SkillTooltip } from './SkillTooltip';
-export type { SkillTooltipProps } from './SkillTooltip';
-
-export { SkillUnlockAnimation, SkillLevelUpAnimation } from './SkillUnlockAnimation';
-export type { SkillUnlockAnimationProps, SkillLevelUpAnimationProps } from './SkillUnlockAnimation';
-
-// Component Styles
-export { skillNodeStyles } from './SkillNode';
-export { skillProgressBarStyles } from './SkillProgressBar';
-export { skillAnimationStyles } from './SkillUnlockAnimation';
+// 简化的类型定义 - 将在重建组件时改为导入正确类型
+interface SkillNode {
+  id: string;
+  name: string;
+  level: number;
+  maxLevel: number;
+  isUnlocked: boolean;
+  experience: number;
+  experienceToNext: number;
+  category: string;
+  prerequisites: string[];
+  children?: SkillNode[];
+  isActive?: boolean;
+}
 
 // Utility Functions for Skills System
 export const SkillUtils = {
@@ -53,7 +53,7 @@ export const SkillUtils = {
    */
   canUnlock: (skill: SkillNode, unlockedSkills: string[]): boolean => {
     if (skill.isUnlocked) return false;
-    return skill.prerequisites.every(prereqId => unlockedSkills.includes(prereqId));
+    return skill.prerequisites.every((prereqId: string) => unlockedSkills.includes(prereqId));
   },
 
   /**
@@ -66,7 +66,7 @@ export const SkillUtils = {
       
       if (!skill.children || skill.children.length === 0) return 1;
       
-      const childDepths = skill.children.map(child => calculateDepth(child, new Set(visited)));
+      const childDepths = skill.children.map((child: SkillNode) => calculateDepth(child, new Set(visited)));
       return 1 + Math.max(...childDepths);
     };
 
@@ -104,7 +104,7 @@ export const SkillUtils = {
     
     return skills.filter(skill => {
       if (skill.isUnlocked) return false;
-      return skill.prerequisites.every(prereqId => unlockedSkillIds.includes(prereqId));
+      return skill.prerequisites.every((prereqId: string) => unlockedSkillIds.includes(prereqId));
     });
   },
 
@@ -194,21 +194,12 @@ export const SkillConfig = {
   },
 } as const;
 
-// Component Bundle for Easy Usage - import components for bundle
-import { SkillTreeVisualization } from './SkillTreeVisualization';
-import { SkillNode as ImportedSkillNodeComponent } from './SkillNode';
-import { SkillProgressBar } from './SkillProgressBar';
-import { SkillTooltip } from './SkillTooltip';
-import { SkillUnlockAnimation, SkillLevelUpAnimation } from './SkillUnlockAnimation';
-
-export const SkillComponents = {
-  TreeVisualization: SkillTreeVisualization,
-  Node: ImportedSkillNodeComponent,
-  ProgressBar: SkillProgressBar,
-  Tooltip: SkillTooltip,
-  UnlockAnimation: SkillUnlockAnimation,
-  LevelUpAnimation: SkillLevelUpAnimation,
-} as const;
-
-// Export default as main component
-export default SkillTreeVisualization;
+// TODO: 重建后恢复以下导出
+// export const SkillComponents = {
+//   TreeVisualization: SkillTreeVisualization,
+//   Node: SkillNodeComponent,
+//   ProgressBar: SkillProgressBar,
+//   Tooltip: SkillTooltip,
+//   UnlockAnimation: SkillUnlockAnimation,
+//   LevelUpAnimation: SkillLevelUpAnimation,
+// } as const;
