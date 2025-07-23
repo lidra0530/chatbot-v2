@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch } from 'react-redux';
 import { ConfigProvider, App as AntApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { store } from './store';
+import type { AppDispatch } from './store';
+import { validateTokenAsync } from './store/slices/authSlice';
 import { ProtectedRoute } from './components/Route';
 import { 
   LoginPage, 
@@ -22,15 +24,20 @@ const antdTheme = {
   },
 };
 
-const App: React.FC = () => {
+// 内部组件用于处理token恢复
+const AppContent: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    // 在应用启动时从localStorage恢复token
+    const token = localStorage.getItem('token');
+    if (token) {
+      dispatch(validateTokenAsync(token));
+    }
+  }, [dispatch]);
+
   return (
-    <Provider store={store}>
-      <ConfigProvider 
-        locale={zhCN}
-        theme={antdTheme}
-      >
-        <AntApp>
-          <Router>
+    <Router>
             <Routes>
               {/* 公开路由 */}
               <Route 
@@ -83,6 +90,18 @@ const App: React.FC = () => {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <Provider store={store}>
+      <ConfigProvider 
+        locale={zhCN}
+        theme={antdTheme}
+      >
+        <AntApp>
+          <AppContent />
         </AntApp>
       </ConfigProvider>
     </Provider>

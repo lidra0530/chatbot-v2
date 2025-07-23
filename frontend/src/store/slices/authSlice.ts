@@ -92,6 +92,29 @@ export const logoutAsync = createAsyncThunk(
   }
 );
 
+export const validateTokenAsync = createAsyncThunk(
+  'auth/validateToken',
+  async (token: string, { rejectWithValue }) => {
+    try {
+      // 验证token格式
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp <= Date.now() / 1000) {
+        throw new Error('Token expired');
+      }
+
+      // 调用API验证token并获取用户信息
+      const response = await authApi.getProfile();
+      return {
+        user: response.data,
+        access_token: token
+      };
+    } catch (error: any) {
+      localStorage.removeItem('token');
+      return rejectWithValue(error.message || 'Token validation failed');
+    }
+  }
+);
+
 export const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -153,6 +176,25 @@ export const authSlice = createSlice({
         state.token = null;
         state.isAuthenticated = false;
         state.error = null;
+      })
+      // Validate Token
+      .addCase(validateTokenAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(validateTokenAsync.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.access_token;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(validateTokenAsync.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        state.error = null; // 不显示token验证失败错误
       });
   },
 });
