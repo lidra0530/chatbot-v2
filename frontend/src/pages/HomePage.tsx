@@ -67,7 +67,7 @@ const HomePage: React.FC = () => {
   };
 
   // 最近活跃的宠物
-  const recentPets = pets
+  const recentPets = [...pets]
     .sort(
       (a, b) =>
         new Date(b.lastInteraction || 0).getTime() -
