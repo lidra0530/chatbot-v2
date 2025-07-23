@@ -10,7 +10,7 @@ import {
   Tag,
   Button,
   Spin,
-  message,
+  App,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -32,6 +32,7 @@ const ChatPage: React.FC = () => {
   const { petId } = useParams<{ petId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { message } = App.useApp();
 
   const { currentPet, isLoading } = useSelector(
     (state: RootState) => state.pet
