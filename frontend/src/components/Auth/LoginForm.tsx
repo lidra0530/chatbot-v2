@@ -29,7 +29,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
       } else {
         message.error(error || '登录失败，请检查用户名和密码');
       }
-    } catch (err) {
+    } catch {
       message.error('登录过程中发生错误');
     }
   };

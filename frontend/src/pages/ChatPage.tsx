@@ -22,11 +22,39 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
 import type { AppDispatch } from '../store';
-import { fetchPetDetailsAsync } from '../store/slices/petSlice';
+import { fetchPetDetailsAsync, selectPet } from '../store/slices/petSlice';
 import { ChatInterface } from '../components/Chat';
 import { MainLayout } from '../components/Layout';
 
 const { Title, Text } = Typography;
+
+// 辅助函数：获取个性特征值，处理各种可能的数据格式
+const getPersonalityValue = (pet: any, trait: string): number => {
+  const personality = pet?.personality;
+  if (!personality) return 50;
+  
+  // 处理可能的嵌套格式 (如 personality.traits.openness)
+  const traitValue = personality.traits ? personality.traits[trait] : personality[trait];
+  
+  if (traitValue == null) return 50;
+  
+  // 如果是0-1范围的小数，转为百分比；如果已经是0-100，直接使用
+  return traitValue > 1 ? traitValue : traitValue * 100;
+};
+
+// 辅助函数：获取状态值，处理各种可能的数据格式
+const getStateValue = (pet: any, stateName: string): number => {
+  const state = pet?.state;
+  if (!state) return 50;
+  
+  // 处理可能的嵌套格式 (如 state.basic.energy)
+  const stateValue = state.basic ? state.basic[stateName] : state[stateName];
+  
+  if (stateValue == null) return 50;
+  
+  // 如果是0-1范围的小数，转为百分比；如果已经是0-100，直接使用
+  return stateValue > 1 ? stateValue : stateValue * 100;
+};
 
 const ChatPage: React.FC = () => {
   const { petId } = useParams<{ petId: string }>();
@@ -41,9 +69,23 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (petId) {
+      // First select the pet, then fetch details
+      dispatch(selectPet(petId));
       dispatch(fetchPetDetailsAsync(petId));
     }
   }, [dispatch, petId]);
+
+  // 调试：输出当前宠物数据
+  useEffect(() => {
+    if (currentPet) {
+      console.log('Current Pet Data:', {
+        name: currentPet.name,
+        personality: currentPet.personality,
+        state: currentPet.state,
+        rawData: currentPet
+      });
+    }
+  }, [currentPet]);
 
   useEffect(() => {
     // 动态计算聊天界面高度
@@ -187,7 +229,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Text>能量</Text>
                     <Text strong>
-                      {Math.round((currentPet.state?.energy || 0.8) * 100)}%
+                      {Math.round(getStateValue(currentPet, 'energy'))}%
                     </Text>
                   </div>
                   <div
@@ -195,7 +237,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Text>满足度</Text>
                     <Text strong>
-                      {Math.round((currentPet.state?.happiness || 0.75) * 100)}%
+                      {Math.round(getStateValue(currentPet, 'happiness'))}%
                     </Text>
                   </div>
                 </Space>
@@ -213,10 +255,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Text>开放性</Text>
                     <Text strong>
-                      {Math.round(
-                        (currentPet.personality?.openness || 0.5) * 100
-                      )}
-                      %
+                      {Math.round(getPersonalityValue(currentPet, 'openness'))}%
                     </Text>
                   </div>
                   <div
@@ -224,10 +263,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Text>外向性</Text>
                     <Text strong>
-                      {Math.round(
-                        (currentPet.personality?.extraversion || 0.5) * 100
-                      )}
-                      %
+                      {Math.round(getPersonalityValue(currentPet, 'extraversion'))}%
                     </Text>
                   </div>
                   <div
@@ -235,10 +271,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Text>责任心</Text>
                     <Text strong>
-                      {Math.round(
-                        (currentPet.personality?.conscientiousness || 0.5) * 100
-                      )}
-                      %
+                      {Math.round(getPersonalityValue(currentPet, 'conscientiousness'))}%
                     </Text>
                   </div>
                   <div
@@ -246,10 +279,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Text>宜人性</Text>
                     <Text strong>
-                      {Math.round(
-                        (currentPet.personality?.agreeableness || 0.5) * 100
-                      )}
-                      %
+                      {Math.round(getPersonalityValue(currentPet, 'agreeableness'))}%
                     </Text>
                   </div>
                   <div
@@ -257,10 +287,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Text>神经质</Text>
                     <Text strong>
-                      {Math.round(
-                        (currentPet.personality?.neuroticism || 0.5) * 100
-                      )}
-                      %
+                      {Math.round(getPersonalityValue(currentPet, 'neuroticism'))}%
                     </Text>
                   </div>
                 </Space>

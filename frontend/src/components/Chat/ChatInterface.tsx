@@ -8,8 +8,14 @@ import {
   sendMessageAsync, 
   fetchConversationsAsync, 
   createConversationAsync,
+  fetchConversationMessagesAsync,
   setCurrentConversation 
 } from '../../store/slices/chatSlice';
+import { 
+  updatePetPersonality,
+  updatePetState,
+  updateLastInteraction 
+} from '../../store/slices/petSlice';
 import { UserOutlined, RobotOutlined } from '@ant-design/icons';
 
 const { Sider, Content } = Layout;
@@ -25,8 +31,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
     conversations, 
     currentConversation, 
     isLoading, 
-    isSending,
-    connectionStatus 
+    isSending
   } = useSelector((state: RootState) => state.chat);
   
   const [inputValue, setInputValue] = useState('');
@@ -79,23 +84,71 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
       }
 
       if (conversationId) {
-        await dispatch(sendMessageAsync({
+        const result = await dispatch(sendMessageAsync({
           petId,
           content,
           conversationId
         }));
+        
+        // 如果发送成功，更新宠物的个性和状态数据
+        if (sendMessageAsync.fulfilled.match(result)) {
+          const { aiResponse } = result.payload;
+          
+          // 更新最后互动时间
+          dispatch(updateLastInteraction(petId));
+          
+          // 如果AI响应包含个性影响，更新个性数据
+          if (aiResponse.metadata?.personalityInfluence?.traitValues) {
+            const traitValues = aiResponse.metadata.personalityInfluence.traitValues;
+            // 将数值从百分比转换为0-1的小数
+            const personalityUpdate = {
+              openness: (traitValues.openness || 50) / 100,
+              conscientiousness: (traitValues.conscientiousness || 50) / 100,
+              extraversion: (traitValues.extraversion || 50) / 100,
+              agreeableness: (traitValues.agreeableness || 50) / 100,
+              neuroticism: (traitValues.neuroticism || 50) / 100,
+            };
+            dispatch(updatePetPersonality({ petId, personality: personalityUpdate }));
+          }
+          
+          // 如果AI响应包含状态影响，更新状态数据
+          if (aiResponse.metadata?.stateInfluence) {
+            const stateInfluence = aiResponse.metadata.stateInfluence;
+            const stateUpdate = {
+              mood: (stateInfluence.currentMood || 'content') as any,
+              energy: (stateInfluence.energyLevel || 80) / 100,
+              health: stateInfluence.healthStatus === 'excellent' ? 0.9 : 
+                     stateInfluence.healthStatus === 'good' ? 0.7 : 0.5,
+              happiness: 0.75, // 默认值，可根据实际数据调整
+              lastUpdated: new Date().toISOString()
+            };
+            dispatch(updatePetState({ petId, state: stateUpdate }));
+          }
+        }
+        
         setInputValue('');
       }
-    } catch (error) {
+    } catch {
       message.error('发送消息失败');
     }
   };
 
   // 选择对话
-  const handleConversationChange = (conversationId: string) => {
+  const handleConversationChange = async (conversationId: string) => {
     const conversation = conversations.find(conv => conv.id === conversationId);
     if (conversation) {
+      // 先设置当前对话
       dispatch(setCurrentConversation(conversation));
+      
+      // 如果对话中没有消息或消息很少，则从服务器获取完整的消息历史
+      if (!conversation.messages || conversation.messages.length === 0) {
+        try {
+          await dispatch(fetchConversationMessagesAsync(conversationId));
+        } catch (error) {
+          console.error('Failed to fetch conversation messages:', error);
+          message.error('加载对话历史失败');
+        }
+      }
     }
   };
 
@@ -104,9 +157,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
     if (!petId) return;
     
     try {
-      await dispatch(createConversationAsync({ petId }));
-      message.success('创建新对话成功');
-    } catch (error) {
+      const result = await dispatch(createConversationAsync({ petId }));
+      if (createConversationAsync.fulfilled.match(result)) {
+        message.success('创建新对话成功');
+        // 重新获取对话列表确保同步
+        dispatch(fetchConversationsAsync(petId));
+      } else {
+        message.error('创建对话失败');
+      }
+    } catch {
       message.error('创建对话失败');
     }
   };
@@ -195,11 +254,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
             onChange={setInputValue}
             onSubmit={handleSendMessage}
             loading={isSending}
-            disabled={connectionStatus !== 'connected'}
+            disabled={isSending}
             placeholder={
-              connectionStatus !== 'connected' 
-                ? '连接中...' 
-                : '输入消息...'
+              !currentConversation 
+                ? '选择或创建对话开始聊天...' 
+                : isSending 
+                  ? '发送中...'
+                  : '输入消息...'
             }
             autoSize={{ minRows: 1, maxRows: 4 }}
           />

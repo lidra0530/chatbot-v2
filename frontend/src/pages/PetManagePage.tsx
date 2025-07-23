@@ -102,7 +102,7 @@ const PetManagePage: React.FC = () => {
         // 重新获取宠物列表
         dispatch(fetchPetsAsync(false));
       }
-    } catch (error) {
+    } catch {
       message.error('创建失败，请重试');
     }
   };
@@ -118,7 +118,7 @@ const PetManagePage: React.FC = () => {
       setEditModalVisible(false);
       setEditingPet(null);
       form.resetFields();
-    } catch (error) {
+    } catch {
       message.error('更新失败，请重试');
     }
   };
@@ -135,7 +135,7 @@ const PetManagePage: React.FC = () => {
         try {
           // TODO: 实现删除宠物API
           message.success('宠物已删除');
-        } catch (error) {
+        } catch {
           message.error('删除失败，请重试');
         }
       },

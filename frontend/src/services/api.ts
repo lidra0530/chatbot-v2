@@ -413,7 +413,7 @@ export const chatApi = {
     apiClient.get<any>(`/conversations/${conversationId}/messages`),
   
   sendMessage: (data: { petId: string; message: string; conversationId?: string }) =>
-    apiClient.post<any>('/chat/completion', data),
+    apiClient.post<any>('/chat/completions', data),
   
   deleteConversation: (conversationId: string) =>
     apiClient.delete(`/conversations/${conversationId}`)

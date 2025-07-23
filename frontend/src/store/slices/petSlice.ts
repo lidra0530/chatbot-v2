@@ -132,9 +132,12 @@ export const fetchPetDetailsAsync = createAsyncThunk(
       const lastUpdated = state.pet.lastUpdated[petId];
       const cacheExpiry = state.pet.cacheExpiry * 60 * 1000; // Convert to ms
       
-      // Check cache validity
+      // Check cache validity - if cached, return the cached pet data
       if (lastUpdated && Date.now() - new Date(lastUpdated).getTime() < cacheExpiry) {
-        return null; // Use cached data
+        const cachedPet = state.pet.pets.find(pet => pet.id === petId);
+        if (cachedPet) {
+          return cachedPet; // Return cached pet data
+        }
       }
 
       const response = await petApi.getPetById(petId);
@@ -329,14 +332,14 @@ export const petSlice = createSlice({
       state.lastUpdated[petId] = new Date().toISOString();
     },
     
-    updatePetState: (state, action: PayloadAction<{ petId: string; state: PetState }>) => {
-      const { petId, state: newState } = action.payload;
+    updatePetState: (state, action: PayloadAction<{ petId: string; state: Partial<PetState> }>) => {
+      const { petId, state: stateUpdate } = action.payload;
       if (state.currentPet && state.currentPet.id === petId) {
-        state.currentPet.state = newState;
+        state.currentPet.state = { ...state.currentPet.state, ...stateUpdate };
       }
       const petIndex = state.pets.findIndex(pet => pet.id === petId);
       if (petIndex !== -1) {
-        state.pets[petIndex].state = newState;
+        state.pets[petIndex].state = { ...state.pets[petIndex].state, ...stateUpdate };
       }
       
       state.lastUpdated[petId] = new Date().toISOString();

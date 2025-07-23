@@ -73,8 +73,26 @@ export const sendMessageAsync = createAsyncThunk(
       if (messageData.conversationId) {
         requestData.conversationId = messageData.conversationId;
       }
+      
+      // 创建用户消息对象
+      const userMessage: Message = {
+        id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+        content: messageData.content,
+        role: 'user',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          read: false
+        }
+      };
+      
       const response = await chatApi.sendMessage(requestData);
-      return response.data;
+      
+      // 返回用户消息和AI响应
+      return {
+        userMessage,
+        aiResponse: response.data,
+        conversationId: messageData.conversationId || response.data.conversationId
+      };
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to send message');
     }
@@ -180,18 +198,42 @@ export const chatSlice = createSlice({
       })
       .addCase(sendMessageAsync.fulfilled, (state, action) => {
         state.isSending = false;
-        const { message, conversationId } = action.payload;
+        // action.payload包含用户消息和AI响应
+        const { userMessage, aiResponse, conversationId } = action.payload;
         
+        // 转换AI响应为前端期望的消息格式
+        const personalityScore = aiResponse.metadata?.personalityInfluence ? 
+          Object.values(aiResponse.metadata.personalityInfluence.traitValues || {}).reduce((sum: number, val: any) => sum + val, 0) / 5 : undefined;
+        
+        const aiMessage: Message = {
+          id: aiResponse.id,
+          content: aiResponse.message,
+          role: 'assistant',
+          timestamp: aiResponse.timestamp,
+          metadata: {
+            ...(personalityScore !== undefined && { personalityScore }),
+            ...(aiResponse.metadata?.stateInfluence && { stateChanges: aiResponse.metadata.stateInfluence }),
+            ...(aiResponse.metadata?.skillsAffected && { skillsGained: aiResponse.metadata.skillsAffected }),
+            ...(aiResponse.metadata?.processingTime && { processingTime: aiResponse.metadata.processingTime }),
+            read: false
+          }
+        };
+        
+        // 添加用户消息和AI回复到当前对话
         if (state.currentConversation && state.currentConversation.id === conversationId) {
-          state.currentConversation.messages.push(message);
-          state.currentConversation.lastActivity = message.timestamp;
+          state.currentConversation.messages.push(userMessage);
+          state.currentConversation.messages.push(aiMessage);
+          state.currentConversation.lastActivity = aiMessage.timestamp;
         }
         
+        // 添加消息到对话列表中的对应对话
         const conversationIndex = state.conversations.findIndex(conv => conv.id === conversationId);
         if (conversationIndex !== -1) {
-          state.conversations[conversationIndex].messages.push(message);
-          state.conversations[conversationIndex].lastActivity = message.timestamp;
+          state.conversations[conversationIndex].messages.push(userMessage);
+          state.conversations[conversationIndex].messages.push(aiMessage);
+          state.conversations[conversationIndex].lastActivity = aiMessage.timestamp;
         }
+        
       })
       .addCase(sendMessageAsync.rejected, (state, action) => {
         state.isSending = false;
@@ -218,10 +260,35 @@ export const chatSlice = createSlice({
       })
       .addCase(fetchConversationMessagesAsync.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentConversation = action.payload;
-        const conversationIndex = state.conversations.findIndex(conv => conv.id === action.payload.id);
-        if (conversationIndex !== -1) {
-          state.conversations[conversationIndex] = action.payload;
+        // action.payload是消息数组，需要转换格式并更新到当前对话的messages中
+        if (state.currentConversation) {
+          // 转换API数据格式为前端期望的格式
+          const formattedMessages = action.payload.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            role: msg.role,
+            timestamp: msg.metadata?.timestamp || msg.createdAt || new Date().toISOString(),
+            metadata: {
+              personalityScore: msg.personalitySnapshot ? 
+                Object.values(msg.personalitySnapshot).reduce((sum: number, val: any) => sum + val, 0) / 5 : undefined,
+              stateChanges: msg.stateSnapshot?.basic,
+              skillsGained: msg.skillsSnapshot,
+              processingTime: msg.processingTime,
+              read: false
+            }
+          }));
+          
+          state.currentConversation.messages = formattedMessages;
+          state.currentConversation.lastActivity = formattedMessages.length > 0 
+            ? formattedMessages[formattedMessages.length - 1].timestamp 
+            : state.currentConversation.lastActivity;
+          
+          // 同时更新conversations数组中的对应对话
+          const conversationIndex = state.conversations.findIndex(conv => conv.id === state.currentConversation!.id);
+          if (conversationIndex !== -1) {
+            state.conversations[conversationIndex].messages = formattedMessages;
+            state.conversations[conversationIndex].lastActivity = state.currentConversation.lastActivity;
+          }
         }
       })
       .addCase(fetchConversationMessagesAsync.rejected, (state, action) => {

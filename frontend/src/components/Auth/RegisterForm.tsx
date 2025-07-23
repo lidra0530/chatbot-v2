@@ -32,7 +32,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       } else {
         message.error(error || '注册失败，请稍后重试');
       }
-    } catch (err) {
+    } catch {
       message.error('注册过程中发生错误');
     }
   };
