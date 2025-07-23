@@ -50,6 +50,17 @@ const PetManagePage: React.FC = () => {
   // const { user } = useSelector((state: RootState) => state.auth);
   const { pets, isLoading } = useSelector((state: RootState) => state.pet);
 
+  // 物种名称映射
+  const speciesMapping: Record<string, string> = {
+    'cat': '猫咪',
+    'dog': '小狗', 
+    'rabbit': '兔子',
+    'bird': '小鸟',
+    'fish': '小鱼',
+    'dragon': '小龙',
+    'custom': '自定义'
+  };
+
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
@@ -167,7 +178,10 @@ const PetManagePage: React.FC = () => {
           <div>
             <div style={{ fontWeight: 500 }}>{name}</div>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.species || '默认物种'}
+              {(() => {
+                const species = record.species || (record as any).breed;
+                return speciesMapping[species] || species || '默认物种';
+              })()}
             </Text>
           </div>
         </Space>

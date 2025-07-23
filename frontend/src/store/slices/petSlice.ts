@@ -95,6 +95,13 @@ export const fetchPetsAsync = createAsyncThunk(
     try {
       const response = await petApi.getPets();
       const petsListResponse = includeList ? await petApi.getPetsList() : null;
+      
+      // 调试：查看后端返回的宠物数据结构
+      console.log('Pets API Response:', response.data);
+      if (response.data.length > 0) {
+        console.log('First pet structure:', response.data[0]);
+      }
+      
       return {
         pets: response.data,
         petsList: petsListResponse?.data || null
