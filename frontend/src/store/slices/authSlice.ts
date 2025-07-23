@@ -54,8 +54,15 @@ export const loginAsync = createAsyncThunk(
       console.log('Response data:', response.data);
       
       const data: AuthResponse = {
-        access_token: response.data.access_token,
-        user: response.data.user
+        access_token: response.data.accessToken,
+        user: {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          displayName: response.data.user.username || response.data.user.displayName || '',
+          bio: response.data.user.bio || '',
+          isVerified: response.data.user.isVerified || false,
+          lastLogin: response.data.user.lastLogin || new Date().toISOString()
+        }
       };
       
       console.log('Processed auth data:', data);
@@ -79,8 +86,15 @@ export const registerAsync = createAsyncThunk(
     try {
       const response = await authApi.register(credentials.email, credentials.password, credentials.displayName);
       const data: AuthResponse = {
-        access_token: response.data.token,
-        user: response.data.user
+        access_token: response.data.accessToken,
+        user: {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          displayName: response.data.user.username || response.data.user.displayName || '',
+          bio: response.data.user.bio || '',
+          isVerified: response.data.user.isVerified || false,
+          lastLogin: response.data.user.lastLogin || new Date().toISOString()
+        }
       };
       localStorage.setItem('token', data.access_token);
       return data;
