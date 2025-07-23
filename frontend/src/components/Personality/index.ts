@@ -10,23 +10,36 @@ export { default as PersonalityTrends } from './PersonalityTrends';
 export { default as PersonalityAnalytics } from './PersonalityAnalytics';
 export { default as PersonalityAnimations } from './PersonalityAnimations';
 
-// 组件类型定义
-export type { default as PersonalityRadarChartProps } from './PersonalityRadarChart';
-export type { default as EvolutionHistoryChartProps } from './EvolutionHistoryChart';
-export type { default as PersonalityTrendsProps } from './PersonalityTrends';
-export type { default as PersonalityAnalyticsProps } from './PersonalityAnalytics';
-export type { default as PersonalityAnimationsProps } from './PersonalityAnimations';
+// 组件类型定义 - import for types
+import type PersonalityRadarChart from './PersonalityRadarChart';
+import type EvolutionHistoryChart from './EvolutionHistoryChart';
+import type PersonalityTrends from './PersonalityTrends';
+import type PersonalityAnalytics from './PersonalityAnalytics';
+import type PersonalityAnimations from './PersonalityAnimations';
+
+export type PersonalityRadarChartProps = React.ComponentProps<typeof PersonalityRadarChart>;
+export type EvolutionHistoryChartProps = React.ComponentProps<typeof EvolutionHistoryChart>;
+export type PersonalityTrendsProps = React.ComponentProps<typeof PersonalityTrends>;
+export type PersonalityAnalyticsProps = React.ComponentProps<typeof PersonalityAnalytics>;
+export type PersonalityAnimationsProps = React.ComponentProps<typeof PersonalityAnimations>;
+
+// Import components for bundle
+import PersonalityRadarChartComponent from './PersonalityRadarChart';
+import EvolutionHistoryChartComponent from './EvolutionHistoryChart';
+import PersonalityTrendsComponent from './PersonalityTrends';
+import PersonalityAnalyticsComponent from './PersonalityAnalytics';
+import PersonalityAnimationsComponent from './PersonalityAnimations';
 
 /**
  * 个性可视化组件集合
  * 提供统一的访问接口
  */
 export const PersonalityComponents = {
-  RadarChart: PersonalityRadarChart,
-  EvolutionHistory: EvolutionHistoryChart,
-  Trends: PersonalityTrends,
-  Analytics: PersonalityAnalytics,
-  Animations: PersonalityAnimations
+  RadarChart: PersonalityRadarChartComponent,
+  EvolutionHistory: EvolutionHistoryChartComponent,
+  Trends: PersonalityTrendsComponent,
+  Analytics: PersonalityAnalyticsComponent,
+  Animations: PersonalityAnimationsComponent
 } as const;
 
 /**
@@ -212,9 +225,9 @@ export const PersonalityUtils = {
    */
   calculateDiversityIndex: (traits: Record<string, number>): number => {
     const values = Object.values(traits);
-    const max = Math.max(...values);
-    const min = Math.min(...values);
-    const range = max - min;
+    // const max = Math.max(...values);
+    // const min = Math.min(...values);
+    // const range = max - min; // Not used in calculation
     
     // 计算标准差
     const mean = values.reduce((sum, val) => sum + val, 0) / values.length;

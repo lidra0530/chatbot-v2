@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../store';
 
 export interface SkillNode {
   id: string;
@@ -258,12 +258,12 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
     
     // Event handlers
     node
-      .on('click', (event, d) => {
+      .on('click', (_event, d) => {
         if (onNodeClick) {
           onNodeClick(d);
         }
       })
-      .on('mouseenter', (event, d) => {
+      .on('mouseenter', (event: MouseEvent, d) => {
         setHoveredNode(d);
         if (onNodeHover) {
           onNodeHover(d);
@@ -288,7 +288,7 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
           tooltip.style('opacity', 0);
         }
       })
-      .on('mousemove', () => {
+      .on('mousemove', (event: MouseEvent) => {
         if (enableTooltips && tooltipRef.current) {
           const tooltip = d3.select(tooltipRef.current);
           tooltip

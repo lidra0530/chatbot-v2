@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store';
+import type { RootState, AppDispatch } from '../../store';
 import { fetchPersonalityAsync } from '../../store/slices/personalitySlice';
 import { generatePersonalityRadarConfig } from '../../utils/visualization';
 import { getVisualizationTheme } from '../../config/visualization';
@@ -45,14 +45,14 @@ const PersonalityRadarChart: React.FC<PersonalityRadarChartProps> = ({
   // 从Redux获取个性数据
   const { 
     traits, 
-    evolutionHistory, 
+    // evolutionHistory, // TODO: Use when needed
     isLoading: personalityLoading,
     lastUpdated 
   } = useSelector((state: RootState) => state.personality);
 
   // 初始化加载个性数据
   useEffect(() => {
-    if (petId && Object.keys(traits).length === 0) {
+    if (petId && traits && Object.keys(traits).length === 0) {
       setIsLoading(true);
       dispatch(fetchPersonalityAsync(petId))
         .unwrap()
@@ -73,7 +73,7 @@ const PersonalityRadarChart: React.FC<PersonalityRadarChartProps> = ({
 
   // 生成图表配置
   const getChartOption = () => {
-    if (Object.keys(traits).length === 0) return null;
+    if (!traits || Object.keys(traits).length === 0) return null;
 
     const baseConfig = generatePersonalityRadarConfig(traits, theme);
     
@@ -95,12 +95,12 @@ const PersonalityRadarChart: React.FC<PersonalityRadarChartProps> = ({
       },
       radar: {
         ...baseConfig.radar,
-        indicator: Object.keys(traits).map(trait => ({
+        indicator: traits ? Object.keys(traits).map(trait => ({
           name: getTraitDisplayName(trait),
           max: 100,
           min: 0,
           color: theme === 'dark' ? '#ffffff' : '#333333'
-        })),
+        })) : [],
         name: {
           textStyle: {
             color: theme === 'dark' ? '#ffffff' : '#333333',
@@ -131,7 +131,7 @@ const PersonalityRadarChart: React.FC<PersonalityRadarChartProps> = ({
         type: 'radar',
         data: [
           {
-            value: Object.values(traits),
+            value: traits ? Object.values(traits) : [],
             name: '当前特征',
             areaStyle: {
               opacity: 0.3,
@@ -188,6 +188,7 @@ const PersonalityRadarChart: React.FC<PersonalityRadarChartProps> = ({
           color: theme === 'dark' ? '#ffffff' : '#333333'
         },
         formatter: (params: any) => {
+          if (!traits) return '';
           const trait = Object.keys(traits)[params.dataIndex];
           const value = params.value;
           const percentage = Math.round(value);
@@ -238,30 +239,32 @@ const PersonalityRadarChart: React.FC<PersonalityRadarChartProps> = ({
 
   // 更新前一状态数据
   useEffect(() => {
-    if (Object.keys(traits).length > 0) {
+    if (traits && Object.keys(traits).length > 0) {
       // 延迟更新，以便显示对比
       const timer = setTimeout(() => {
         setPreviousTraits(traits);
       }, 2000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [traits]);
 
   // 图表点击事件处理
   const handleChartClick = (params: any) => {
+    if (!traits) return;
     const trait = Object.keys(traits)[params.dataIndex];
     console.log('点击特征:', trait, '数值:', params.value);
     // 可以在这里添加详细信息模态框或跳转逻辑
   };
 
   // 图表就绪事件
-  const handleChartReady = (echartsInstance: any) => {
+  const handleChartReady = (_echartsInstance: any) => {
     // 可以在这里进行图表实例的额外配置
     console.log('个性雷达图已就绪');
   };
 
   const chartOption = getChartOption();
-  const isDataEmpty = !chartOption || Object.keys(traits).length === 0;
+  const isDataEmpty = !chartOption || !traits || Object.keys(traits).length === 0;
   const showLoadingState = isLoading || personalityLoading;
 
   return (
@@ -299,8 +302,8 @@ const PersonalityRadarChart: React.FC<PersonalityRadarChartProps> = ({
             zlevel: 0
           }}
           opts={{
-            renderer: 'canvas',
-            useDirtyRect: true // 性能优化
+            renderer: 'canvas'
+            // // useDirtyRect: true // Not supported // 性能优化 - 不支持此选项
           }}
         />
       )}

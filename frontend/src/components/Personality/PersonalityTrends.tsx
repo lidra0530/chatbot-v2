@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store';
-import { fetchPersonalityAnalyticsAsync } from '../../store/slices/personalitySlice';
+import type { RootState, AppDispatch } from '../../store';
+import { fetchPersonalityAnalysisAsync } from '../../store/slices/personalitySlice';
 import { getVisualizationTheme } from '../../config/visualization';
 
 /**
@@ -52,7 +52,7 @@ const PersonalityTrends: React.FC<PersonalityTrendsProps> = ({
   useEffect(() => {
     if (petId) {
       setIsLoading(true);
-      dispatch(fetchPersonalityAnalyticsAsync({ 
+      dispatch(fetchPersonalityAnalysisAsync({ 
         petId, 
         forecastDays,
         analysisType: 'comprehensive'
@@ -551,7 +551,7 @@ const PersonalityTrends: React.FC<PersonalityTrendsProps> = ({
           }}
           opts={{
             renderer: 'canvas',
-            useDirtyRect: true
+            // useDirtyRect: true // Not supported
           }}
         />
       )}

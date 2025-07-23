@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store';
+import type { RootState, AppDispatch } from '../../store';
 import { fetchEvolutionHistoryAsync } from '../../store/slices/personalitySlice';
-import { getVisualizationTheme, VISUALIZATION_CONFIG } from '../../config/visualization';
+import { getVisualizationTheme, // VISUALIZATION_CONFIG /* unused */ } from '../../config/visualization';
 
 /**
  * 个性演化历史图表组件 - 时间线显示个性特征的演化过程
@@ -362,7 +362,7 @@ const EvolutionHistoryChart: React.FC<EvolutionHistoryChartProps> = ({
           }}
           opts={{
             renderer: 'canvas',
-            useDirtyRect: true,
+            // useDirtyRect: true // Not supported,
             width: 'auto',
             height: 'auto'
           }}

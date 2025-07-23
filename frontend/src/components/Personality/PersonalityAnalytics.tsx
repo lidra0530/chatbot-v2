@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store';
-import { fetchPersonalityAnalyticsAsync } from '../../store/slices/personalitySlice';
+import type { RootState, AppDispatch } from '../../store';
+import { fetchPersonalityAnalysisAsync } from '../../store/slices/personalitySlice';
 import { getVisualizationTheme } from '../../config/visualization';
 
 /**
@@ -49,7 +49,7 @@ const PersonalityAnalytics: React.FC<PersonalityAnalyticsProps> = ({
   useEffect(() => {
     if (petId) {
       setIsLoading(true);
-      dispatch(fetchPersonalityAnalyticsAsync({ 
+      dispatch(fetchPersonalityAnalysisAsync({ 
         petId, 
         analysisType: 'comprehensive',
         timeRange: analysisRange
