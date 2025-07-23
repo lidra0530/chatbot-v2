@@ -5,8 +5,10 @@
  * 注意：组件正在重建中，暂时只导出配置和工具函数
  */
 
+// 重建完成的组件
+export { default as PersonalityRadarChart } from './PersonalityRadarChart';
+
 // TODO: 重建以下组件
-// export { default as PersonalityRadarChart } from './PersonalityRadarChart';
 // export { default as EvolutionHistoryChart } from './EvolutionHistoryChart';
 // export { default as PersonalityTrends } from './PersonalityTrends';
 // export { default as PersonalityAnalytics } from './PersonalityAnalytics';
