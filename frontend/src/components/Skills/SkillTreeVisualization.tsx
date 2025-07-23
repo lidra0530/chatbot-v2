@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../store';
-import { skillsSlice } from '../../store/slices/skillsSlice';
 
 export interface SkillNode {
   id: string;
@@ -52,8 +51,8 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [hoveredNode, setHoveredNode] = useState<SkillNode | null>(null);
   
-  const dispatch = useDispatch<AppDispatch>();
-  const { skills, isLoading, error } = useSelector((state: RootState) => state.skills);
+  // const dispatch = useDispatch<AppDispatch>(); // TODO: Enable when Redux actions are implemented
+  const { data: skills, isLoading, error } = useSelector((state: RootState) => state.skills);
   
   // Transform skills data to tree structure
   const skillTree = React.useMemo(() => {
@@ -63,7 +62,7 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
     const skillMap = new Map<string, SkillNode>();
     
     // Create skill nodes
-    skillsArray.forEach(skill => {
+    skillsArray.forEach((skill: any) => {
       skillMap.set(skill.id, {
         ...skill,
         children: [],
@@ -72,13 +71,13 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
     
     // Build tree structure
     const rootNodes: SkillNode[] = [];
-    skillsArray.forEach(skill => {
+    skillsArray.forEach((skill: any) => {
       const node = skillMap.get(skill.id)!;
       
       if (skill.prerequisites.length === 0) {
         rootNodes.push(node);
       } else {
-        skill.prerequisites.forEach(prereqId => {
+        skill.prerequisites.forEach((prereqId: string) => {
           const parent = skillMap.get(prereqId);
           if (parent) {
             parent.children = parent.children || [];
@@ -193,8 +192,8 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
       .call(d3.drag<SVGGElement, SkillNode>()
         .on('start', (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
+          d.fx = d.x ?? null;
+          d.fy = d.y ?? null;
         })
         .on('drag', (event, d) => {
           d.fx = event.x;
@@ -289,7 +288,7 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
           tooltip.style('opacity', 0);
         }
       })
-      .on('mousemove', (event) => {
+      .on('mousemove', () => {
         if (enableTooltips && tooltipRef.current) {
           const tooltip = d3.select(tooltipRef.current);
           tooltip
@@ -332,19 +331,21 @@ export const SkillTreeVisualization: React.FC<SkillTreeVisualizationProps> = ({
     };
   }, [skillTree, width, height, colors, enableZoom, enablePan, enableTooltips, onNodeClick, onNodeHover]);
 
-  // Load skills data
+  // Load skills data - placeholder for future implementation
   useEffect(() => {
     if (petId) {
-      dispatch(fetchPetSkills(petId));
+      // TODO: dispatch(fetchPetSkills(petId));
+      console.log('Loading skills for pet:', petId);
     }
-  }, [dispatch, petId]);
+  }, [petId]);
 
-  // Handle skill level up
-  const handleSkillLevelUp = useCallback((skillId: string) => {
-    if (petId) {
-      dispatch(updateSkill({ petId, skillId, action: 'levelUp' }));
-    }
-  }, [dispatch, petId]);
+  // Handle skill level up - placeholder for future implementation
+  // const handleSkillLevelUp = useCallback((skillId: string) => {
+  //   if (petId) {
+  //     // TODO: dispatch(updateSkill({ petId, skillId, action: 'levelUp' }));
+  //     console.log('Level up skill:', skillId, 'for pet:', petId);
+  //   }
+  // }, [petId]);
 
   if (isLoading) {
     return (

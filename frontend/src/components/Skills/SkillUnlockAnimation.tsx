@@ -291,6 +291,7 @@ export const SkillLevelUpAnimation: React.FC<SkillLevelUpAnimationProps> = ({
       
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [trigger, duration, onComplete]);
 
   if (!isVisible) return null;

@@ -5,8 +5,11 @@
 export { SkillTreeVisualization } from './SkillTreeVisualization';
 export type { SkillTreeVisualizationProps, SkillNode } from './SkillTreeVisualization';
 
-export { SkillNode } from './SkillNode';
+export { SkillNode as SkillNodeComponent } from './SkillNode';
 export type { SkillNodeProps } from './SkillNode';
+
+// Import SkillNode type for internal use
+import type { SkillNode } from './SkillTreeVisualization';
 
 export { SkillProgressBar } from './SkillProgressBar';
 export type { SkillProgressBarProps } from './SkillProgressBar';
@@ -191,10 +194,16 @@ export const SkillConfig = {
   },
 } as const;
 
-// Component Bundle for Easy Usage
+// Component Bundle for Easy Usage - import components for bundle
+import { SkillTreeVisualization } from './SkillTreeVisualization';
+import { SkillNode as ImportedSkillNodeComponent } from './SkillNode';
+import { SkillProgressBar } from './SkillProgressBar';
+import { SkillTooltip } from './SkillTooltip';
+import { SkillUnlockAnimation, SkillLevelUpAnimation } from './SkillUnlockAnimation';
+
 export const SkillComponents = {
   TreeVisualization: SkillTreeVisualization,
-  Node: SkillNode,
+  Node: ImportedSkillNodeComponent,
   ProgressBar: SkillProgressBar,
   Tooltip: SkillTooltip,
   UnlockAnimation: SkillUnlockAnimation,
