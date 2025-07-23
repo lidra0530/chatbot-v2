@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bubble, Sender, Conversations } from '@ant-design/x';
-import { Layout, Space, Spin, message as Message } from 'antd';
+import { Layout, Space, Spin, App } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../store';
 import type { AppDispatch } from '../../store';
@@ -20,6 +20,7 @@ interface ChatInterfaceProps {
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const { message } = App.useApp();
   const { 
     conversations, 
     currentConversation, 
@@ -86,7 +87,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
         setInputValue('');
       }
     } catch (error) {
-      Message.error('发送消息失败');
+      message.error('发送消息失败');
     }
   };
 
@@ -104,9 +105,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
     
     try {
       await dispatch(createConversationAsync(petId));
-      Message.success('创建新对话成功');
+      message.success('创建新对话成功');
     } catch (error) {
-      Message.error('创建对话失败');
+      message.error('创建对话失败');
     }
   };
 
