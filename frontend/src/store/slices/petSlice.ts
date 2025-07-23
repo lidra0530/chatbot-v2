@@ -5,7 +5,6 @@ import type {
   Pet, 
   CompletePetData, 
   PetListItem, 
-  CreatePetRequest, 
   UpdatePetRequest,
   PetStatistics,
   PetFilter,
@@ -108,7 +107,7 @@ export const fetchPetsAsync = createAsyncThunk(
 
 export const createPetAsync = createAsyncThunk(
   'pet/createPet',
-  async (petData: CreatePetRequest, { rejectWithValue }) => {
+  async (petData: { name: string; breed: string; personality: any }, { rejectWithValue }) => {
     try {
       const response = await petApi.createPet(petData);
       return response.data;

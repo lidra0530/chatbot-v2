@@ -37,7 +37,20 @@ const PetForm: React.FC<PetFormProps> = ({ visible, onCancel, onSuccess }) => {
 
   const onFinish = async (values: PetFormValues) => {
     try {
-      const result = await dispatch(createPetAsync(values));
+      // 映射前端表单数据到后端期望的格式
+      const petData = {
+        name: values.name,
+        breed: values.species, // 映射species到breed
+        personality: {
+          openness: 0.5,
+          conscientiousness: 0.5,
+          extraversion: 0.5,
+          agreeableness: 0.5,
+          neuroticism: 0.5
+        }
+      };
+
+      const result = await dispatch(createPetAsync(petData));
       if (createPetAsync.fulfilled.match(result)) {
         message.success('宠物创建成功！');
         form.resetFields();

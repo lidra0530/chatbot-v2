@@ -360,7 +360,7 @@ export const petApi = {
   getPetsList: () =>
     apiClient.get<any[]>('/pets/list'),
   
-  createPet: (data: { name: string; species: string }) =>
+  createPet: (data: { name: string; breed: string; personality: any }) =>
     apiClient.post<any>('/pets', data),
   
   getPetById: (petId: string) =>

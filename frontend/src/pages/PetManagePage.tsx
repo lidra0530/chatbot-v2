@@ -32,6 +32,7 @@ import type { AppDispatch } from '../store';
 import { fetchPetsAsync, createPetAsync } from '../store/slices/petSlice';
 import { MainLayout } from '../components/Layout';
 import type { Pet } from '../types/pet.types';
+import type { PersonalityTraits } from '../types/personality.types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -46,7 +47,7 @@ interface PetFormData {
 const PetManagePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { user } = useSelector((state: RootState) => state.auth);
+  // const { user } = useSelector((state: RootState) => state.auth);
   const { pets, isLoading } = useSelector((state: RootState) => state.pet);
 
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -62,12 +63,24 @@ const PetManagePage: React.FC = () => {
   // 创建宠物
   const handleCreatePet = async (values: PetFormData) => {
     try {
+      // 映射前端表单数据到后端期望的格式
+      const personalityMapping: Record<string, Partial<PersonalityTraits>> = {
+        'friendly': { openness: 0.8, extraversion: 0.7, agreeableness: 0.8 },
+        'curious': { openness: 0.9, conscientiousness: 0.6, neuroticism: 0.3 },
+        'calm': { neuroticism: 0.2, conscientiousness: 0.7, agreeableness: 0.6 },
+        'playful': { extraversion: 0.8, openness: 0.7, agreeableness: 0.7 }
+      };
+
       const petData = {
-        ...values,
-        userId: user!.id,
-        status: 'active' as const,
-        level: 1,
-        experience: 0,
+        name: values.name,
+        breed: values.species, // 映射species到breed
+        personality: personalityMapping[values.personality] || {
+          openness: 0.5,
+          conscientiousness: 0.5,
+          extraversion: 0.5,
+          agreeableness: 0.5,
+          neuroticism: 0.5
+        }
       };
 
       const result = await dispatch(createPetAsync(petData));
@@ -75,6 +88,8 @@ const PetManagePage: React.FC = () => {
         message.success('宠物创建成功！');
         setCreateModalVisible(false);
         form.resetFields();
+        // 重新获取宠物列表
+        dispatch(fetchPetsAsync(false));
       }
     } catch (error) {
       message.error('创建失败，请重试');
