@@ -36,8 +36,14 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // 在应用启动时从localStorage恢复token
     const token = localStorage.getItem('token');
-    if (token) {
+    console.log('App startup - token from localStorage:', token);
+    
+    // 检查token是否有效（不是'undefined'字符串且有实际值）
+    if (token && token !== 'undefined' && token !== 'null') {
       dispatch(validateTokenAsync(token));
+    } else {
+      // 清理无效的token
+      localStorage.removeItem('token');
     }
   }, [dispatch]);
 

@@ -48,13 +48,26 @@ export const loginAsync = createAsyncThunk(
   async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
       const response = await authApi.login(credentials.email, credentials.password);
+      
+      // 调试：查看后端返回的实际数据结构
+      console.log('Login API Response:', response);
+      console.log('Response data:', response.data);
+      
       const data: AuthResponse = {
-        access_token: response.data.token,
+        access_token: response.data.access_token,
         user: response.data.user
       };
+      
+      console.log('Processed auth data:', data);
+      
+      if (!data.access_token) {
+        throw new Error('No access token received from server');
+      }
+      
       localStorage.setItem('token', data.access_token);
       return data;
     } catch (error: any) {
+      console.error('Login error:', error);
       return rejectWithValue(error.message || 'Login failed');
     }
   }

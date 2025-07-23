@@ -334,7 +334,7 @@ function createApiError(error: { message: string; status: number; code?: string 
 // Authentication API calls
 export const authApi = {
   login: (email: string, password: string) =>
-    apiClient.post<{token: string; user: any}>('/auth/login', { email, password }),
+    apiClient.post<{access_token: string; user: any}>('/auth/login', { email, password }),
   
   register: (email: string, password: string, displayName: string) =>
     apiClient.post<{token: string; user: any}>('/auth/register', { email, password, displayName }),
