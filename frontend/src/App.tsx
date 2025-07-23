@@ -97,6 +97,56 @@ const AppContent: React.FC = () => {
           }
         />
 
+        {/* 聊天相关路由 */}
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/pets" replace />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 个性分析路由 */}
+        <Route
+          path="/personality"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/pets" replace />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 技能树路由 */}
+        <Route
+          path="/skills"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/pets" replace />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 状态监控路由 */}
+        <Route
+          path="/state"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/pets" replace />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 个人资料路由 */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/settings" replace />
+            </ProtectedRoute>
+          }
+        />
+
         {/* 404重定向 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
