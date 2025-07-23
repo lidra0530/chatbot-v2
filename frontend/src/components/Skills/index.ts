@@ -3,8 +3,10 @@
 // 
 // 注意：组件正在重建中，暂时只导出配置和工具函数
 
+// 重建完成的组件
+export { default as SkillTreeVisualization } from './SkillTreeVisualization';
+
 // TODO: 重建以下组件
-// export { SkillTreeVisualization } from './SkillTreeVisualization';
 // export { SkillNode as SkillNodeComponent } from './SkillNode';
 // export { SkillProgressBar } from './SkillProgressBar';
 // export { SkillTooltip } from './SkillTooltip';
