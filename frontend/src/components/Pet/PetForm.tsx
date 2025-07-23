@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Select, Button, Modal, message, Upload } from 'antd';
+import { Form, Input, Select, Button, Modal, Upload, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../../store';
@@ -24,6 +24,7 @@ const PetForm: React.FC<PetFormProps> = ({ visible, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading } = useSelector((state: RootState) => state.pet);
+  const { message } = App.useApp();
 
   const speciesOptions = [
     { value: 'cat', label: '猫咪' },

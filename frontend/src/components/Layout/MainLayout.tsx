@@ -1,8 +1,21 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Button, Avatar, Dropdown, Space } from 'antd';
-import { MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { 
+  MenuFoldOutlined, 
+  MenuUnfoldOutlined, 
+  UserOutlined, 
+  LogoutOutlined, 
+  SettingOutlined,
+  HomeOutlined,
+  RobotOutlined,
+  MessageOutlined,
+  HeartOutlined,
+  TrophyOutlined,
+  BarChartOutlined
+} from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { RootState } from '../../store';
 import { logout } from '../../store/slices/authSlice';
 
@@ -15,33 +28,59 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  // 根据当前路径确定选中的菜单项
+  const getSelectedKey = () => {
+    const path = location.pathname;
+    if (path === '/') return 'home';
+    if (path.startsWith('/pets')) return 'pets';
+    if (path.startsWith('/chat')) return 'chat';
+    if (path.startsWith('/personality')) return 'personality';
+    if (path.startsWith('/skills')) return 'skills';
+    if (path.startsWith('/state')) return 'state';
+    if (path.startsWith('/settings')) return 'settings';
+    return 'home';
+  };
 
   const menuItems: MenuProps['items'] = [
     {
-      key: '1',
-      icon: <UserOutlined />,
+      key: 'home',
+      icon: <HomeOutlined />,
+      label: '首页',
+      onClick: () => navigate('/'),
+    },
+    {
+      key: 'pets',
+      icon: <RobotOutlined />,
       label: '我的宠物',
+      onClick: () => navigate('/pets'),
     },
     {
-      key: '2',
-      icon: <UserOutlined />,
+      key: 'chat',
+      icon: <MessageOutlined />,
       label: '对话聊天',
+      onClick: () => navigate('/chat'),
     },
     {
-      key: '3',
-      icon: <UserOutlined />,
-      label: '个性演化',
+      key: 'personality',
+      icon: <HeartOutlined />,
+      label: '个性分析',
+      onClick: () => navigate('/personality'),
     },
     {
-      key: '4',
-      icon: <UserOutlined />,
+      key: 'skills',
+      icon: <TrophyOutlined />,
       label: '技能树',
+      onClick: () => navigate('/skills'),
     },
     {
-      key: '5',
-      icon: <UserOutlined />,
+      key: 'state',
+      icon: <BarChartOutlined />,
       label: '状态监控',
+      onClick: () => navigate('/state'),
     },
   ];
 
@@ -50,11 +89,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: 'profile',
       icon: <UserOutlined />,
       label: '个人资料',
+      onClick: () => navigate('/profile'),
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
       label: '设置',
+      onClick: () => navigate('/settings'),
     },
     {
       type: 'divider',
@@ -91,7 +132,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <Menu
           theme="light"
           mode="inline"
-          defaultSelectedKeys={['1']}
+          selectedKeys={[getSelectedKey()]}
           items={menuItems}
           style={{ borderRight: 0 }}
         />

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Sender } from '@ant-design/x';
-import { message, Upload } from 'antd';
+import { Upload, App } from 'antd';
 import { PaperClipOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store';
@@ -21,6 +21,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const senderRef = useRef<any>(null);
+  const { message } = App.useApp();
   
   const { isSending, connectionStatus } = useSelector((state: RootState) => state.chat);
 
