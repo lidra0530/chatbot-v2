@@ -50,6 +50,13 @@ class ApiClient {
     const state = store.getState();
     const token = state.auth.token;
     
+    // 调试信息
+    console.log('Auth Debug:', {
+      reduxToken: token,
+      localStorageToken: localStorage.getItem('token'),
+      isAuthenticated: state.auth.isAuthenticated
+    });
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };

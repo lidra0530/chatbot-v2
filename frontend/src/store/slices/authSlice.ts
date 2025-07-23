@@ -102,10 +102,17 @@ export const validateTokenAsync = createAsyncThunk(
         throw new Error('Token expired');
       }
 
-      // 调用API验证token并获取用户信息
-      const response = await authApi.getProfile();
+      // 直接返回token，在reducer中处理状态设置
+      // 这样可以确保Redux store中有token，API调用才能成功
       return {
-        user: response.data,
+        user: { 
+          id: payload.sub || payload.userId, 
+          email: payload.email || '', 
+          displayName: payload.displayName || '',
+          bio: '',
+          isVerified: false,
+          lastLogin: new Date().toISOString()
+        },
         access_token: token
       };
     } catch (error: any) {
