@@ -66,7 +66,7 @@ export const store = configureStore({
         ],
       },
       // 在开发环境中启用不可变性检查
-      immutableCheck: process.env['NODE_ENV'] === 'development',
+      immutableCheck: import.meta.env.DEV,
     } as any)
     .concat(customMiddlewares as any),
 } as any);
