@@ -400,8 +400,11 @@ export const chatApi = {
   getConversations: (petId?: string) =>
     apiClient.get<any[]>(`/conversations${petId ? `?petId=${petId}` : ''}`),
   
-  createConversation: (petId: string) =>
-    apiClient.post<any>('/conversations', { petId }),
+  createConversation: (petId: string, title?: string) =>
+    apiClient.post<any>('/conversations', { 
+      petId, 
+      title: title || `与${new Date().toLocaleString()}的对话` 
+    }),
   
   getConversationById: (conversationId: string) =>
     apiClient.get<any>(`/conversations/${conversationId}`),

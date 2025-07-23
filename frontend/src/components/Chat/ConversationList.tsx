@@ -66,7 +66,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
     }
 
     try {
-      const result = await dispatch(createConversationAsync(petId));
+      const result = await dispatch(createConversationAsync({ petId }));
       if (createConversationAsync.fulfilled.match(result)) {
         message.success('创建新对话成功');
         // 自动选择新创建的对话

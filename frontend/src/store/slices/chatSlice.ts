@@ -83,9 +83,9 @@ export const sendMessageAsync = createAsyncThunk(
 
 export const createConversationAsync = createAsyncThunk(
   'chat/createConversation',
-  async (petId: string, { rejectWithValue }) => {
+  async ({ petId, title }: { petId: string; title?: string }, { rejectWithValue }) => {
     try {
-      const response = await chatApi.createConversation(petId);
+      const response = await chatApi.createConversation(petId, title);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to create conversation');

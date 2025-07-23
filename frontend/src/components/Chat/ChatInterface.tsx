@@ -72,7 +72,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
       
       // 如果没有当前对话，创建新对话
       if (!conversationId) {
-        const newConvResult = await dispatch(createConversationAsync(petId));
+        const newConvResult = await dispatch(createConversationAsync({ petId }));
         if (createConversationAsync.fulfilled.match(newConvResult)) {
           conversationId = newConvResult.payload.id;
         }
@@ -104,7 +104,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ petId }) => {
     if (!petId) return;
     
     try {
-      await dispatch(createConversationAsync(petId));
+      await dispatch(createConversationAsync({ petId }));
       message.success('创建新对话成功');
     } catch (error) {
       message.error('创建对话失败');
