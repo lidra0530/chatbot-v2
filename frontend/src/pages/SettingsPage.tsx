@@ -11,7 +11,7 @@ import {
   Typography,
   Select,
   Slider,
-  message,
+  App,
   Modal,
   Alert,
 } from 'antd';
@@ -59,6 +59,7 @@ const SettingsPage: React.FC = () => {
 
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 

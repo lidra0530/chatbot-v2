@@ -11,7 +11,7 @@ import {
   Form,
   Input,
   Select,
-  message,
+  App,
   Avatar,
   Tooltip,
   Progress,
@@ -53,6 +53,7 @@ const PetManagePage: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const [form] = Form.useForm();
+  const { message } = App.useApp();
 
   useEffect(() => {
     dispatch(fetchPetsAsync(false));
